@@ -40,4 +40,5 @@ const allQualities = (input) => {
 console.log(allQualities(input1)[0].quality) // Part 1
 
 console.log(allQualities(input2).map((x)=>x.quality).filter((x,i,a)=>i===0 || i===a.length-1).reduce((a,c)=>a-c)) // Part 2
+
 console.log(allQualities(input3).map((x,i)=>x.id*(i+1)).reduce((a,c)=>a+c)) // Part 3
