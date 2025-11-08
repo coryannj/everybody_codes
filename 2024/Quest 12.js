@@ -1,72 +1,88 @@
 const { dir, group } = require('console');
 const fs = require('fs');
-const input1 = fs.readFileSync('../quest12_1.txt',{ encoding: 'utf8', flag: 'r' });
-const input2 = fs.readFileSync('../quest12_2.txt',{ encoding: 'utf8', flag: 'r' });
-const input3 = fs.readFileSync('../quest12_3.txt',{ encoding: 'utf8', flag: 'r' });
+const input1 = fs.readFileSync('../inputs/everybody_codes/2024/quest12_1.txt',{ encoding: 'utf8', flag: 'r' });
+const input2 = fs.readFileSync('../inputs/everybody_codes/2024/quest12_2.txt',{ encoding: 'utf8', flag: 'r' });
+const input3 = fs.readFileSync('../inputs/everybody_codes/2024/quest12_3.txt',{ encoding: 'utf8', flag: 'r' });
 
-function destroyBlocks(input){
-    const lines = input.split(/[\r\n]+/).map((x)=>x.split('').slice(1)).reverse().slice(1)
-    let segments = {}
-    let targets = []
-    let segNum = '_ABC'
+// Part 1 and 2
+const hitAllTargets = (input) => {
+    let grid = input.split(/[\r\n]+/).map((x)=>x.split('').slice(1)).reverse().slice(1);
+    let [cat,tar,hr] = ['ABC','T','H'];
+    let catapults = [],targets = [], hardRocks = [], ranking=0;
+
+    for(const [y,row] of grid.entries()){
+        for(const [x,col] of row.entries()){
+            if(cat.includes(col)) catapults.push([x,y]);
     
-    lines.forEach((x,ix)=>{
-        x.forEach((y,yx)=>{
-            if(y!=='.'){
-                if(y!=='T' && y!=='H'){
-                    segments[y] = {"number":segNum.indexOf(y),"coOrd":[yx,ix],"targets":[]}
-                } else {
-                    targets.push([yx,ix,y])
-                }
-            }
-        })
-    })
-
-    targets.sort((a,b)=>{
-        if(a[1]===b[1]){
-            return a[0]-b[0]
-        } else {
-            return b[1]-a[1]
+            if(tar.includes(col)) targets.push([x,y]);
+    
+            if(hr.includes(col)) hardRocks.push([x,y]);
         }
-    })
-    
-    let maxcol = Math.max(...targets.map((x)=>x[0]))
-    
-    const shoot = (segmentKey,[x,y],segNumber) => {
-        let power = 1
-        let px,py
-        do{
-            [px,py] = [(2*power)+x,power+y]
-    
-            targets.flatMap(([tx,ty,tz],tidx)=>Math.abs(tx-px)===Math.abs(ty-py)?[[tidx,tz]]:[]).forEach((t)=>{
-                segments[segmentKey]['targets'].push(t.concat(segNumber,power))
-            })
-            power++
-        }while(px<=maxcol)
     }
-    
-    
 
-    Object.entries(segments).forEach(([sKey,sVal])=>{
-        shoot(sKey,sVal.coOrd,sVal.number)
-    })
+    const destroy = ([cx,cy],[tx,ty]) => {
+        let 
+            xDiff = tx-cx,
+            yDiff = ty-cy
+    
+        if(xDiff===yDiff && xDiff>0) return yDiff // Can be hit on upwards trajectory
+        
+        if(yDiff>0 && xDiff>0 && xDiff>cx+yDiff && xDiff<=2*yDiff) return yDiff // Can be hit on horizontal trajectory
+        
+        // Can be hit on downwards trajectory   
+        let direction = new Map([
+            [-1,[-1,1]], // move up left
+            [0,[0,0]],
+            [1,[1,-1]] // move down right
+        ])
+    
+        let newTarget = [tx,ty].map((x,i)=> x+ (Math.abs(yDiff)*direction.get(Math.sign(yDiff))[i])) // Calculate when trajectory through target would be at same height as catapult
+    
+        return newTarget[0]%3===0 ? newTarget[0]/3 : 0 // x diff is 3x shooting power
+    }
 
-    let minHits = Array(targets.length).fill('.').map((x)=>999999)
-    Object.values(segments).flatMap((x)=>x.targets).forEach(([tidx,tval,sNum,sPower])=>{
-        let tsum = tval === 'T' ? sNum*sPower : sNum*sPower*2
-        
-        
-        if(minHits[tidx]>tsum){
-            minHits[tidx] = tsum
+    for (const [cInd,c] of catapults.entries()){
+        for(const t of targets){
+            ranking+=((cInd+1)*destroy(c,t));
         }
-    })
-    
-    return minHits.reduce((acc,curr)=>acc+curr)
+
+        for(const rock of hardRocks){
+            ranking+=((cInd+1)*destroy(c,rock)*2)
+        }
+    }
+
+    return ranking
 }
-console.log(destroyBlocks(input1))
-console.log(destroyBlocks(input2))
+
+console.log(hitAllTargets(input1))
+console.log(hitAllTargets(input2))
 
 // Part 3
+const destroyp3 = ([cx,cy],[tx,ty]) => {
+    let 
+        xDiff = tx-cx,
+        yDiff = ty-cy
+
+    if(xDiff===yDiff && xDiff>0) return Math.floor(yDiff) // Can be hit on upwards trajectory
+    
+    if(yDiff>0 && xDiff>0 && xDiff>cx+yDiff && xDiff<=2*yDiff) return yDiff // Can be hit on horizontal trajectory
+    
+    // Can be hit on downwards trajectory   
+    let direction = new Map([
+        [-1,[-1,1]], // move up left
+        [0,[0,0]],
+        [1,[1,-1]] // move down right
+    ])
+
+    let newTarget = [tx,ty].map((x,i)=> x+ (Math.abs(yDiff)*direction.get(Math.sign(yDiff))[i])) // Calculate when trajectory through target would be at same height as catapult
+
+    return newTarget[0]%3===0 ? newTarget[0]/3 : 0 // x diff is 3x shooting power
+}
+
+
+
+
+
 let segments = new Map([[1,[0,0]],[2,[0,1]],[3,[0,2]]])
 console.log(segments)
 
