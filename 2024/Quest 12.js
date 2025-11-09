@@ -70,8 +70,8 @@ const destroyp3 = ([cx,cy],[tx,ty]) => {
    
     if(xDiff<0) return [-1,-1] // Early exit - hits y axis higher than catapult, no hit possible
     
-    if(cx+yDiff===tx && cy+yDiff===ty) return [Math.floor(yDiff/2),cy+Math.floor(yDiff/2)] // Hit on upwards trajectory
-   
+    if(xDiff===0) return [Math.floor(yDiff/2),cy+Math.floor(yDiff/2)] // Hit on upwards trajectory
+
     let sPower1 = Math.floor((yDiff-xDiff)/2); // Shooting power if hit on horizontal
     
     if(xDiff<=sPower1) return [Math.floor((yDiff-xDiff)/2),cy+Math.floor((yDiff-xDiff)/2)] // Hit on horizontal trajectory
