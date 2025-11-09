@@ -54,63 +54,50 @@ const hitAllTargets = (input) => {
     return ranking
 }
 
-console.log(hitAllTargets(input1))
-console.log(hitAllTargets(input2))
+console.log(hitAllTargets(input1)) // Part 1 answer
+console.log(hitAllTargets(input2)) // Part 2 answer
 
 // Part 3
+let 
+    meteors = input3.split(/[\r\n]+/).map((x)=>x.split(' ').map(Number)),
+    catapults = [[0,0],[0,1],[0,2]],
+    p3result=0
+
 const destroyp3 = ([cx,cy],[tx,ty]) => {
     let 
-        xDiff = tx-cx,
-        yDiff = ty-cy
-
-    if(xDiff===yDiff && xDiff>0) return Math.floor(yDiff) // Can be hit on upwards trajectory
+        yDiff = ty-cy,
+        xDiff = tx-yDiff // x distance of meteor from catapult when y at catapult height
+   
+    if(xDiff<0) return [-1,-1] // Early exit - hits y axis higher than catapult, no hit possible
     
-    if(yDiff>0 && xDiff>0 && xDiff>cx+yDiff && xDiff<=2*yDiff) return yDiff // Can be hit on horizontal trajectory
+    if(cx+yDiff===tx && cy+yDiff===ty) return [Math.floor(yDiff/2),cy+Math.floor(yDiff/2)] // Hit on upwards trajectory
+   
+    let sPower1 = Math.floor((yDiff-xDiff)/2); // Shooting power if hit on horizontal
     
-    // Can be hit on downwards trajectory   
-    let direction = new Map([
-        [-1,[-1,1]], // move up left
-        [0,[0,0]],
-        [1,[1,-1]] // move down right
-    ])
+    if(xDiff<=sPower1) return [Math.floor((yDiff-xDiff)/2),cy+Math.floor((yDiff-xDiff)/2)] // Hit on horizontal trajectory
+    
+    let sPower2 = Math.floor(yDiff/3); // Shooting power if hit on downwards
+    let [ncx,ncy] = [cx+(2*sPower2),cy+sPower2] // Catapult at last horizontal point
+    let [ntx,nty] = [tx-(yDiff-sPower2),ty-(yDiff-sPower2)] // Find where meteor is when catapult starts falling - both have to start falling at same y co-ordinate to hit
 
-    let newTarget = [tx,ty].map((x,i)=> x+ (Math.abs(yDiff)*direction.get(Math.sign(yDiff))[i])) // Calculate when trajectory through target would be at same height as catapult
-
-    return newTarget[0]%3===0 ? newTarget[0]/3 : 0 // x diff is 3x shooting power
+    if((ntx-ncx)%2===0 && (ntx-ncx)/2 <= ncy) return [sPower2,ncy-((ntx-ncx)/2)] // Hit on downwards trajectory
+    
+    return [-1,-1]
+        
 }
 
-
-
-
-
-let segments = new Map([[1,[0,0]],[2,[0,1]],[3,[0,2]]])
-console.log(segments)
-
-let rock = [3522,2594]
-//console.log(rock.map((x)=>x/2))
-console.log(3522/2)
-console.log((2594-2)/2)
-
-console.log([3522-1296,2594-2-1296])
-console.log([3522-1762-50,2594-1762-50])
-console.log([ 1710, 857 ])
-
-console.log(880+880,2+880)
-
-while(rock[0]>=0 && rock[1]>=0){
-    rock[0]--
-    rock[1]--
-    console.log([rock[0],rock[1]])
-}
-
-let a = [[0,0],[1,1],[2,2],[]]
-
-let power = 1
-while(true){
-    let r = [0,2]
+for(const m of meteors){
+    let thisResult = catapults.map((x,i)=>[i+1].concat(destroyp3(x,m))).filter((x)=>x[1]!==-1).map((x)=>[x[0]*x[1],x[2]]).sort((a,b)=>{
+        if(a[1]===b[1]){
+            if(a[0]>b[0]) return 1
+            if(a[0]<b[0]) return -1
+            return 0
+        } else {
+            return b[1]-a[1]
+        }
+    });
     
-    r[0] = (2*power)+r[0]
-    r[1] = power+r[1]
-    console.log(power,r)
-    power++
+    p3result+=thisResult[0][0]
 }
+
+console.log(p3result) // Part 3 answer
