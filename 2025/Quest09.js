@@ -3,10 +3,11 @@ const input1 = fs.readFileSync('../inputs/everybody_codes/2025/quest9_1.txt',{ e
 const input2 = fs.readFileSync('../inputs/everybody_codes/2025/quest9_2.txt',{ encoding: 'utf8', flag: 'r' });
 const input3 = fs.readFileSync('../inputs/everybody_codes/2025/quest9_3.txt',{ encoding: 'utf8', flag: 'r' });
 
-const similarity = (input) => {
+const similarity = (input,partNo) => {
     let lines = input.split(/[\r\n]/).map((x)=>x.split(':').map((y,yi)=>yi===0?parseInt(y):y.split('')))
 
     let result = []
+    let families = []
 
     for(const [li,[id,scale]] of lines.entries()){
         let others = lines.filter((x,ix)=>ix!==li).map(([xId,xscale],ix)=>[xId,xscale.map((y,yi)=>y===scale[yi]?1:0)])
@@ -16,39 +17,37 @@ const similarity = (input) => {
         }).map(([xId,xscale])=>[xId,xscale.reduce((a,c)=>a+c)])
 
         if(matching.length>0){
-            result.push([id,...matching])
-        }
-    }
+            result.push(matching[0][1]*matching[1][1])
 
-    return result
-}
-
-console.log(similarity(input1)[0].filter((x,i)=>i>0).map((x)=>x[1]).reduce((a,c)=>a*c)) // Part 1
-
-console.log(similarity(input2).map(([c,p1,p2])=>p1[1]*p2[1]).reduce((a,c)=>a+c)) // Part 2
-
-// Part 3
-let p3result = similarity(input3).map(([child,p1,p2])=>new Set([child,p1[0],p2[0]])) // create sets of ids
-
-while(p3result.some((x,i,a)=>a.some((y,yi)=>yi!==i &&!x.isDisjointFrom(y)))){
-    
-    let families = []
-
-    p3result.forEach((x,i,a)=>{
-        if(families.length===0){
-            families.push(x)
-        } else {
-            let famIndex = families.findIndex((fv)=>!x.isDisjointFrom(fv))
-    
-            if(famIndex!==-1){
-                families[famIndex]=families[famIndex].union(x)
-            } else {
-                families.push(x)
+            if(partNo){                
+                families.push(new Set([id,matching[0][0],matching[1][0]]))
             }
         }
-    })
+    }
+    
+    if (!partNo) return result.reduce((a,c)=>a+c);
 
-    p3result = families
+    // Part 3
+    while(families.some((x,i,a)=>a.some((y,yi)=>yi!==i &&!x.isDisjointFrom(y)))){
+    
+        let newFamilies = []
+    
+        families.forEach((x,i,a)=>{
+                let famIndex = newFamilies.findIndex((f)=>!x.isDisjointFrom(f))
+        
+                if(famIndex!==-1){
+                    newFamilies[famIndex]=newFamilies[famIndex].union(x)
+                } else {
+                    newFamilies.push(x)
+                }
+        })
+    
+        families = newFamilies
+    }
+
+    return Math.max(...families.map((x)=>[...x.values()].reduce((a,c)=>a+c)))
 }
 
-console.log(Math.max(...p3result.map((x)=>[...x.values()].reduce((a,c)=>a+c)))) // Part 3 answer
+console.log(similarity(input1))
+console.log(similarity(input2))
+console.log(similarity(input3,3))
