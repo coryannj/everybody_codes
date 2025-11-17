@@ -147,19 +147,17 @@ const eatSheep = ([pawns,knight,lastTurn]) =>{
     let ans = 0
 
     if(lastTurn === 'D'){
-        if(pawns.every((pos)=>pawnMoves?.[pos] && pawnMoves[pos]===knight && knight.slice(-1) !== "#")) {
-            ans+=eatSheep([pawns,knight,'S']) // Skip turn - no legal moves
-        } else if(pawns.every((pos)=>pawnMoves[pos] === undefined || (pawnMoves[pos]===knight && knight.slice(-1) !== "#"))){
-            ans=0 // Only legal move is to move sheep off board/or to run of hideouts
-        } else {
-            pawns.map((x)=>pawnMoves[x]).forEach((x,i)=>{
-                if(x!== undefined){
-                    if((x === knight && knight.slice(-1) === "#")||(x!== knight)){
-                        ans+=eatSheep([pawns.map((y,yi)=>i===yi?x:y),knight,'S'])
+        pawns.map((x)=>pawnMoves[x]).forEach((x,i,a)=>{
+            if(x!== undefined){
+                if((x === knight && knight.slice(-1) === "#")||(x!== knight)){
+                    ans+=eatSheep([pawns.map((y,yi)=>i===yi?x:y),knight,'S'])
+                } else {
+                    if(a.length===1){
+                        ans+=eatSheep([pawns,knight,'S']) // Skip turn - no legal moves - only possible when 1 sheep left
                     }
                 }
-            })
-        }
+            }
+        })
     } else if (lastTurn === 'S'){
         knightMoves[knight].forEach((x,i)=>{
             if(x.slice(-1) === "#" || (x.slice(-1) !== "#" && !pawns.includes(x))){
