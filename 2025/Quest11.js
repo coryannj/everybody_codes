@@ -17,7 +17,7 @@ const exchanges = (input,partNo) => {
         }
         counter++
     }
-    console.log(ducks)
+
     // Second phase
     while(ducks.some((x,i,a)=>i<a.length-1 && x<a[i+1])){
         for(i=0;i<ducks.length-1;i++){
@@ -37,19 +37,27 @@ const exchanges = (input,partNo) => {
     return counter
 }
 
-//console.log(exchanges(input1,1)) // Part 1 
+console.log(exchanges(input1,1)) // Part 1 
+let t1=performance.now()
 console.log(exchanges(input2)) // Part 2
-
+let t2 = performance.now()
+console.log(t2-t1)
 //Part 3
 let p3 = input3.split(/[\r\n]/).map(Number)
-let p3avg = p3.reduce((a,c)=>a+c)/p3.length
-console.log(p3.map((x)=>Math.abs(x-p3avg)).reduce((a,c)=>a+c)/2) // Part 3 answer
+
+const round2Fast = (round1Arr) => {
+    let avg = round1Arr.reduce((a,c)=>a+c)/round1Arr.length
+    
+    return round1Arr.map((x)=>Math.abs(x-avg)).reduce((a,c)=>a+c)/2
+}
+
+console.log(round2Fast(p3)) // Part 3 answer
 
 // **** Trying to work out non-brute force for Part 1 ****
 
 // Gives the values for the round 1 output array - still trying to work out how to get number of rounds
 const first = (input) => {
-    let ducks = input2.split(/[\r\n]/).map(Number)
+    let ducks = input.split(/[\r\n]/).map(Number)
 
     let processed = []
 
@@ -69,29 +77,29 @@ const first = (input) => {
             thisObj.avg = thisObj.total/thisObj.len
         }
 
-        if(processed.length>0){
-            while(processed.at(-1).avg>thisObj.avg){
-                let lastObj = processed.pop()
-                thisObj.vals = [...lastObj.vals,...thisObj.vals]
-                thisObj.total+=lastObj.total
-                thisObj.len+=lastObj.len
-                thisObj.avg = thisObj.total/thisObj.len
-            }
-        } 
+        while(processed.length>0 && processed.at(-1).avg>thisObj.avg){
+            let lastObj = processed.pop()
+            thisObj.vals = [...lastObj.vals,...thisObj.vals]
+            thisObj.total+=lastObj.total
+            thisObj.len+=lastObj.len
+            thisObj.avg = thisObj.total/thisObj.len
+        }
         
         let remainder = thisObj.total%thisObj.len
-        let p2arr = Array(thisObj.len).fill(Math.floor(thisObj.avg)).map((x,i,a)=>i>=a.length-remainder?x+1:x)
-        thisObj.p2 = p2arr
+        let round2arr = Array(thisObj.len).fill(Math.floor(thisObj.avg)).map((x,i,a)=>i>=a.length-remainder?x+1:x)
+        thisObj.round2 = round2arr
 
         processed.push(thisObj)
     }
 
     return processed
-
 }
 
-let f = first(input2).map((x)=>x.p2).flat()
-console.log(f)
+let t3 = performance.now()
+//let round1 = first(input2).map((x)=>x.round2).flat()
+console.log(round2Fast(first(input2).map((x)=>x.round2).flat()))
+let t4 = performance.now()
+console.log(t4-t3)
 
 
 // Nonsense below here
