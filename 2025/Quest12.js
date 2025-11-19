@@ -49,10 +49,10 @@ let maxObj = explode(input3,3)
 let maxObjSize = Math.max(...Object.values(maxObj).map((x)=>x.size))
 let maxKey = Object.keys(maxObj).find((x)=>maxObj[x].size===maxObjSize)
 
-let [nextMaxKey,nextMaxSize] = Object.entries(maxObj).filter((x)=>x[0]!==maxKey).map(([k,set])=>[k,set.union(maxObj[maxKey]).size]).sort((a,b)=>b[1]-a[1])[0]
+let [nextMaxKey,nextMaxSet] = Object.entries(maxObj).filter((x)=>x[0]!==maxKey).map(([k,set])=>[k,set.union(maxObj[maxKey])]).sort((a,b)=>b[1].size-a[1].size)[0]
 
-let nextMaxSet = maxObj[nextMaxKey].union(maxObj[maxKey])
+nextMaxSet = nextMaxSet.union(maxObj[maxKey])
 
-let [nextNextMaxKey,nextNextMaxSize] = Object.entries(maxObj).filter((x)=>x[0]!==maxKey && x[0]!==nextMaxKey).map(([k,set])=>[k,nextMaxSet.union(set).size]).sort((a,b)=>b[1]-a[1])[0]
+let [nextNextMaxKey,nextNextMaxSet] = Object.entries(maxObj).filter((x)=>x[0]!==maxKey && x[0]!==nextMaxKey).map(([k,set])=>[k,nextMaxSet.union(set)]).sort((a,b)=>b[1].size-a[1].size)[0]
 
-console.log(nextMaxSet.union(maxObj[nextNextMaxKey]).size) // Part 3
+console.log(nextMaxSet.union(nextNextMaxSet).size) // Part 3
