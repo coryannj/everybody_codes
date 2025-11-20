@@ -88,6 +88,7 @@ const first = (input) => {
         let remainder = thisObj.total%thisObj.len
         let round2arr = Array(thisObj.len).fill(Math.floor(thisObj.avg)).map((x,i,a)=>i>=a.length-remainder?x+1:x)
         thisObj.round2 = round2arr
+        thisObj.maxDiff = Math.max(...thisObj.vals.map((x,i)=>Math.abs(x-round2arr[i])))
 
         processed.push(thisObj)
     }
@@ -95,11 +96,89 @@ const first = (input) => {
     return processed
 }
 
-let t3 = performance.now()
-//let round1 = first(input2).map((x)=>x.round2).flat()
-console.log(round2Fast(first(input2).map((x)=>x.round2).flat()))
-let t4 = performance.now()
-console.log(t4-t3)
+
+let round1 = first(input2)
+//console.log(round2Fast(first(input2).map((x)=>x.round2).flat()))
+console.log(round1)
+
+let r1Vals = round1[4].vals.slice()
+
+let chunks = []
+
+while(r1Vals.length>0){
+    let newChunk = [r1Vals.shift()]
+    while(r1Vals[0]<newChunk.at(-1)){
+        newChunk.push(r1Vals.shift())
+    }
+    chunks.push(newChunk)
+
+}
+
+chunks = chunks.map((x,i,a)=>{
+    //let before,after
+    
+    let rObj = {groupDiff: x[0]-x.at(-1)}
+    if(i>0){
+        rObj.before=x[0]-a[i-1].at(-1)
+        
+    }
+
+    if(i<a.length-1){
+        rObj.after=a[i+1][0]-x.at(-1)
+    }
+
+    return [x,rObj]
+})
+//console.log(chunks)
+
+
+console.log(chunks.find(([c,cObj],i,a)=>Math.min(cObj.before,cObj.after)<cObj.groupDiff && [cObj.before,cObj.after].includes(Math.min(...a.flatMap(([ax,aObj])=>[aObj.before,aObj.after].filter((y)=>y))))))
+
+let minDiffInd = chunks.findIndex(([c,cObj],i,a)=>Math.min(cObj.before,cObj.after)<cObj.groupDiff && [cObj.before,cObj.after].includes(Math.min(...a.flatMap(([ax,aObj])=>[aObj.before,aObj.after].filter((y)=>y)))))
+let minDiffItem = chunks[minDiffInd]
+
+console.log(minDiffInd,minDiffItem)
+
+let otherInd
+
+if(minDiffItem.before === undefined){
+    otherInd = minDiffInd+1
+} else if (minDiffItem.after===undefined){
+    otherInd = minDiffInd-1
+} else {
+    if(minDiffItem.before<minDiffItem.after){
+        otherInd = minDiffInd-1
+    } else {
+        otherInd = minDiffInd+1
+    }
+}
+
+let toMerge = minDiffInd<otherInd ? [minDiffItem,chunks[otherInd]] : [chunks[otherInd],minDiffItem]
+
+console.log(chunks[otherInd])
+
+const compress = ([c1,c1Obj],[c2,c2Obj]) =>{
+
+    let diffVal = c1Obj.after
+    //if(diffVal%2===1)resultArr.at(-1)++
+    let resultArr = [...c1.map((x,i) => i===0 ? x-(Math.ceil(diffVal/2)):x+(Math.ceil(diffVal/2))),...c2.map((x,i) => i===0 ? x-Math.ceil(diffVal/2):x+Math.ceil(x+diffVal/2))]
+    
+    
+    
+    return [Math.ceil(diffVal/2),resultArr]
+}
+
+let [rTotal,newVal] = compress(...toMerge)
+
+console.log([rTotal,newVal])
+
+
+// Find min index 
+// Get index of before/after - take smaller index for updating array
+// Merge and recalculate by diff/2 - add diff/2 to running total
+// if diff/2%1 - last val is 1 higher if after, same and add 1 to next if before
+// shift every other val in array and recalculate diffObj
+// remove whatever item was merged
 
 
 // Nonsense below here
@@ -116,17 +195,7 @@ console.log(Math.max(...lines2),Math.min(...lines2))
 //572887
 //2450900
 
-let chunks = []
 
-while(lines2.length>0){
-    let newChunk = [lines2.shift()]
-    while(lines2[0]<newChunk.at(-1)){
-        newChunk.push(lines2.shift())
-    }
-    chunks.push(newChunk)
-
-}
-console.log(chunks)
 
 while(chunks.some((x,i,a)=>i<a.length-1 && a[i+1].length>1 && a[i+1][0]-x.at(-1)<a[i+1][0]-a[i+1].at(-1))){
     let indexes = chunks.flatMap((x,i,a)=>{
