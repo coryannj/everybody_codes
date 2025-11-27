@@ -110,4 +110,4 @@ p3TestCases.values().forEach((x)=>{
     p3Answer.push(getEnergy(p3Plants))
 })
 
-console.log('Part 3 answer is ',p3Answer.filter((x)=>x>0).reduce((a,c)=>a+Math.abs(p3MaxEnergy-c),0));
+console.log('Part 3 answer is ',p3Answer.filter((x)=>x>0).reduce((a,c)=>a+p3MaxEnergy-c,0));
