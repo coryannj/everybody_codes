@@ -3,9 +3,7 @@ const input1 = fs.readFileSync('../inputs/everybody_codes/2025/quest18_1.txt',{ 
 const input2 = fs.readFileSync('../inputs/everybody_codes/2025/quest18_2.txt',{ encoding: 'utf8', flag: 'r' });
 const input3 = fs.readFileSync('../inputs/everybody_codes/2025/quest18_3.txt',{ encoding: 'utf8', flag: 'r' });
 
-const numregex = /[-]*\d+/g
-
-let lines1=input1.split(/[\r\n]{2,}/).map((x)=>x.split(/[\r\n]/))
+const numregex = /[-]*\d+/g;
 
 const plantMap = (input) => {
     let plants=new Map();
