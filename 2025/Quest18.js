@@ -96,14 +96,11 @@ p2TestCases.values().forEach((x)=>{
 console.log('Part 2 answer is ',p2Answer);
 
 // Part 3
-let [p3TestCases,p3Plants] = getPlants(input3);
-let p3Answer = [];
-
-let p3Queue = p3Plants.get(0).get('branches').entries().filter(([id,incoming])=>{
-    return incoming>0 && !p3Plants.get(id).get('branches').values().some((y)=>y<0);
-})
-
-let p3MaxEnergy = getEnergy(p3Plants,p3Queue)
+let
+    [p3TestCases,p3Plants] = getPlants(input3),
+    p3Queue = p3Plants.get(0).get('branches').entries().filter(([id,incoming])=> !p3Plants.get(id).get('branches').values().some((y)=>y<0)),
+    p3MaxEnergy = getEnergy(p3Plants,p3Queue),
+    p3Answer = []
 
 p3TestCases.values().forEach((x)=>{
     x.values().forEach(([tId,tVal])=>{
