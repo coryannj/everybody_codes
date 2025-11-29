@@ -8,6 +8,9 @@ lines=input3.split(/[\r\n]/).map((x,xi)=>x.split('').map((y,yi)=>'@S'.includes(y
 let len = lines.length
 let vR = lines.findIndex((x)=>x.includes('@'))
 let vC = lines[vR].indexOf('@')
+let vKey = `${vR}-${vC}`
+
+console.log(lines[vR].join(''))
 
 const getRadius = (r,c) => Math.floor(Math.sqrt(((vR - r) ** 2) + ((vC - c) ** 2)));
 
@@ -18,10 +21,11 @@ let sC = lines[sR].indexOf('S')
 let sKey = `${sR}-${sC}`
 let sRadius = getRadius(sR,sC)
 
-console.log(len,'vr vc',vR,vC,'sr sc',sR,sC,'sRad',sRadius)
+console.log(len,'vr vc',vR,vC,'sr sc',sR,sC,'sRad',sRadius,lines[0].length)
 
 // Divide grid into quadrants: 0 = top left, 1 = top right, 2 = bottom right, 3 = bottom left (note volcano row/col is duplicated in each)
 let quads = new Map([[0,[[0,vR],[0,vC]]],[1,[[0,vR],[vC,len-1]]],[2,[[vR,len-1],[vC,len-1]]],[3,[[vR,len-1],[0,vC]]]]) 
+console.log(quads)
 
 const getQuadrant = (r,c) => {
     return [...quads.keys()].filter((x)=>{
@@ -30,7 +34,7 @@ const getQuadrant = (r,c) => {
     })
 }
 
-const nextArr = (r,c) => [[r+1,c],[r-1,c],[r,c+1],[r,c-1]].filter(([nr,nc])=>lines?.[nr]?.[nc] !== undefined && lines?.[nr]?.[nc] !== '@').map((x)=>x.join('-'))
+const nextArr = (r,c) => [[r+1,c],[r-1,c],[r,c+1],[r,c-1]].filter(([nr,nc])=>0<=nr && nr<len && 0<=nc && nc<len && `${nr}-${nc}`!==vKey).map((x)=>x.join('-'))
 
 let gridObj = {}
 
@@ -59,39 +63,34 @@ let tArr = Array(sRadius).fill('.').map((x,i)=>i)
 
 let timeObj = {}
 
-Object.keys(gridObj).forEach((x)=>{
-    timeObj[x]={}
+// Object.keys(gridObj).forEach((x)=>{
+//     timeObj[x]={}
     
-    tArr.forEach((y)=>{
-        timeObj[x][y] = {}
-        timeObj[x][y]['time']=1000000
-        timeObj[x][y]['paths']=[]
-    })
+//     tArr.forEach((y)=>{
+//         timeObj[x][y] = {}
+//         timeObj[x][y]['time']=1000000
+//         timeObj[x][y]['paths']=[]
+//     })
     
-    //Object.fromEntries(tArr.map((x)=>[`${x}`,{time:1000000,paths:[]}]))
-})
+//     //Object.fromEntries(tArr.map((x)=>[`${x}`,{time:1000000,paths:[]}]))
+// })
 
 // start
 // end callback fn - end keys???
 
-
-
-
-
-
-
-
-
 let pQueue = [{
         time:0,
         pRadius:0,
-        minRadius:0,
+        minRadius:100000,
         path: [sKey]
     }]
 
 let paths = []
 let counter = 0
 let tcounter = 0
+
+// redo priority queue in iterables - array buckets
+
 
 while(pQueue.length>0){
     let p = pQueue.shift()
@@ -100,7 +99,7 @@ while(pQueue.length>0){
     // console.log('tcheck',timeObj[`${p.path.at(-1)}`])
     // console.log(timeObj[`${p.path.at(-1)}`][`${p.pRadius}`])
 
-    if(p.time>0 && timeObj[p.path.at(-1)][`${p.pRadius}`].time<p.time) continue;
+    if(p.time>0 && timeObj[`${p.path.at(-1)}-${p.pRadius}`] !== undefined && timeObj[`${p.path.at(-1)}-${p.pRadius}`]['time']<p.time) continue;
 
 
 
@@ -113,24 +112,37 @@ while(pQueue.length>0){
         if(!last.path.includes(nextKey)){
                     let nxt = gridObj[nextKey]
         let newRadius = Math.floor((last.time+nxt.val)/30)
-        let nxtObj = structuredClone(last)
+        let timeKey = `${nextKey}-${newRadius}`
 
-            if(last.time+nxt.val<=timeObj[nextKey][newRadius]['time'] && nxt.quadrant.every((n)=>n<2) && newRadius < nxt.radius && newRadius < sRadius 
+            if((timeObj[timeKey]===undefined || last.time+nxt.val<=timeObj[timeKey]['time']) && nxt.quadrant.includes(0) && newRadius <last.minRadius && newRadius < nxt.radius && newRadius < sRadius
                 //&& gridObj[last.path.at(-1)].radius
             ){
-                
+                let nxtObj = structuredClone(last)  
                 nxtObj.time+=nxt.val
                 nxtObj.pRadius=newRadius
-                nxtObj.minRadius=newRadius+1
+                nxtObj.minRadius=nxt.radius<last.minRadius ? nxt.radius : last.minRadius
                 nxtObj.path.push(nextKey)
 
-                if(nxtObj.time === timeObj[nextKey][newRadius]['time']){
-                    timeObj[nextKey][newRadius]['paths'].push(nxtObj)
+                
+
+                if(timeObj[timeKey]===undefined || nxtObj.time<timeObj[timeKey]['time']){
+                    timeObj[timeKey] = {time:nxtObj.time,paths:[nxtObj]}
                 } else {
-                    timeObj[nextKey][newRadius]['time'] = nxtObj.time
-                    timeObj[nextKey][newRadius]['paths'] = [nxtObj]
-                    tcounter++
+                    timeObj[timeKey]['paths'].push(nxtObj)
+                    // if(nxtObj.time === timeObj[timeKey]['time']){
+                        
+                    // } else {
+
+                    // }
                 }
+
+                // if(nxtObj.time === timeObj[nextKey][newRadius]['time']){
+                //     timeObj[nextKey][newRadius]['paths'].push(nxtObj)
+                // } else {
+                //     timeObj[nextKey][newRadius]['time'] = nxtObj.time
+                //     timeObj[nextKey][newRadius]['paths'] = [nxtObj]
+                //     tcounter++
+                // }
 
                 //timeObj[nextKey]=nxtObj.time;
                 //console.log('nextObj is ',nxtObj)
@@ -151,7 +163,7 @@ while(pQueue.length>0){
     //console.log('p is ',p,' getNext is ',gridObj[p.path.at(-1)].next.map((x)=>getNext(p,x)))
 
     gridObj[p.path.at(-1)].next.forEach((x)=>{
-        if(parseInt(x[0])===vR){
+        if(parseInt(x.split('-')[0])===vR){
         //if(x === sKey){
             let xObj = gridObj[x]
 
@@ -161,17 +173,37 @@ while(pQueue.length>0){
             v.pRadius=Math.floor(v.time/30)
             //v.minRadius=v.pRadius+1
 
-            if(v.pRadius<xObj.radius && v.time<=timeObj[x][v.pRadius]['time']){
-                if(v.time === timeObj[x][v.pRadius]['time']){
-                    timeObj[x][v.pRadius]['paths'].push(v)
+            if(v.pRadius<xObj.radius && (timeObj[`${x}-${v.pRadius}`]===undefined || v.time<=timeObj[`${x}-${v.pRadius}`]['time'])){
+
+                if(timeObj[`${x}-${v.pRadius}`]===undefined || v.time<timeObj[`${x}-${v.pRadius}`]['time']){
+                    timeObj[`${x}-${v.pRadius}`] = {time:v.time,paths:[v]}
                 } else {
-                     timeObj[x][v.pRadius]['time'] = v.time
-                    timeObj[x][v.pRadius]['paths'] = [v]
+                    timeObj[`${x}-${v.pRadius}`]['paths'].push(v)
                 }
+
+                // if(v.time === timeObj[x][v.pRadius]['time']){
+                //     timeObj[x][v.pRadius]['paths'].push(v)
+                // } else {
+                //      timeObj[x][v.pRadius]['time'] = v.time
+                //     timeObj[x][v.pRadius]['paths'] = [v]
+                // }
+
+
+
+                // if(timeObj[timeKey]===undefined || nxtObj.time<timeObj[timeKey]['time']){
+                //     timeObj[timeKey] = {time:nxtObj.time,paths:[nxtObj]}
+                // } else {
+                //     timeObj[timeKey]['paths'].push(nxtObj)
+                //     // if(nxtObj.time === timeObj[timeKey]['time']){
+                        
+                //     // } else {
+
+                //     // }
+                // }
 
             paths.push(v)
 
-            console.log('found path', 'paths length is now', paths.length, 'queue length is ',pQueue.length,' counter is ',counter,v)
+            //console.log('found path', 'paths length is now', paths.length, 'queue length is ',pQueue.length,' counter is ',counter,v)
             }
 
 
@@ -208,6 +240,7 @@ while(pQueue.length>0){
     })
     if(counter%10000===0){
         console.log(' counter is ',counter, 'paths length is now',paths.length, 'queue length is ',pQueue.length)
+        console.log(Object.entries(timeObj).filter(([k,v])=>parseInt(k.split('-')[0])===vR))
     }
     counter++
 }
@@ -218,7 +251,7 @@ console.log('Ended paths.length is ',paths.length)
 
 //console.log(paths)
 
-console.log(timeObj)
+console.log(Object.entries(timeObj).filter(([k,v])=>k.split('-')[0]==='15'))
 
 
 // quadrant <2
