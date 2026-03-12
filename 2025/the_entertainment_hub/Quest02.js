@@ -24,7 +24,7 @@ const p1 = (input) => {
 console.log('Part 1 ',p1(input1))
 
 // Part 2 and 3
-// Caveats - repeats must be even, halves must be equal size after first for loop
+// Caveats - repeats must be even, halves must be equal size after first loop
 
 const solve = (input,repeats) => {
     let
