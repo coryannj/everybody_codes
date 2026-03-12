@@ -25,44 +25,30 @@ console.log('Part 1 ',p1(input1))
 
 // Part 2 and 3
 // Caveat - balloons.length has to be even
+// Performance is better with an additional first loop that goes over balloons repeat/2 times before populating firstHalf, but then have to handle a bunch of edge cases
 
 const solve = (input,repeats) => {
     let
         balloons = input.split(''),
         balloonLen = balloons.length,
-        bolts = ['R','G','B'],
-        halfLen = (repeats/2)*balloonLen,
-        count = halfLen,
-        firstHalf = [],
-        secondInd = repeats%2 === 0 ? 0 : balloonLen/2,
-        offset = secondInd
-
-    for(i=0;i<halfLen;i++){
-        if(bolts[i % 3] !== balloons[i%balloonLen]){
-            firstHalf.push(balloons[secondInd%balloonLen])
-            i++
-        } 
-        secondInd++
-    }
+        halfRepeats = Math.floor(repeats/2),
+        count = 0,
+        secondHalfInd = repeats%2 === 0 ? 0 : balloonLen/2,
+        firstHalf = Array(halfRepeats).fill(balloons).flat()
+    
+    if(repeats%2!==0)firstHalf.push(balloons.slice(0,balloonLen/2))
     
     let firstVals = firstHalf.values()
-
-    // If halves unequal length - rebalance
-    if(secondInd-offset+firstHalf.length !== halfLen){
-        firstVals.next()
-        count++
-    }
-
     let currVal = firstVals.next()
 
     do{
         if(bolts[count % 3] !== currVal.value){
-            firstHalf.push(balloons[secondInd%balloonLen])
+            firstHalf.push(balloons[secondHalfInd%balloonLen])
             firstVals.next()
             count++
         } 
         count++
-        secondInd++
+        secondHalfInd++
         currVal = firstVals.next()
     } while (!currVal.done)
 
