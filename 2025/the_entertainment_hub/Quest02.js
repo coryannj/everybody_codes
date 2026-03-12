@@ -24,10 +24,7 @@ const p1 = (input) => {
 console.log('Part 1 ',p1(input1))
 
 // Part 2 and 3
-
-// * Caveats * 
-// - repeats must be even
-// - halves must be equal size after first loop (can be resolved by initialising firstHalf to (...balloons)*repeats)
+// Caveat - balloons.length has to be even
 
 const solve = (input,repeats) => {
     let
@@ -37,8 +34,9 @@ const solve = (input,repeats) => {
         halfLen = (repeats/2)*balloonLen,
         count = halfLen,
         firstHalf = [],
-        secondInd = 0
-    
+        secondInd = repeats%2 === 0 ? 0 : balloonLen/2,
+        offset = secondInd
+
     for(i=0;i<halfLen;i++){
         if(bolts[i % 3] !== balloons[i%balloonLen]){
             firstHalf.push(balloons[secondInd%balloonLen])
@@ -46,8 +44,15 @@ const solve = (input,repeats) => {
         } 
         secondInd++
     }
-
+    
     let firstVals = firstHalf.values()
+
+    // If halves unequal length - rebalance
+    if(secondInd-offset+firstHalf.length !== halfLen){
+        firstVals.next()
+        count++
+    }
+
     let currVal = firstVals.next()
 
     do{
