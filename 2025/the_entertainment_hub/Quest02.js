@@ -25,35 +25,32 @@ console.log('Part 1 ',p1(input1))
 
 // Part 2 and 3
 // Caveat - balloons.length has to be even
-// Performance is better with an additional first loop that goes over balloons repeat/2 times before populating firstHalf, but then have to handle a bunch of edge cases
 
-const solve = (input,repeats) => {
+const solve2 = (input,repeats) => {
     let
         balloons = input.split(''),
         balloonLen = balloons.length,
-        halfRepeats = Math.floor(repeats/2),
+        halfLen = (repeats/2)*balloonLen,
         count = 0,
         secondHalfInd = repeats%2 === 0 ? 0 : balloonLen/2,
-        firstHalf = Array(halfRepeats).fill(balloons).flat()
-    
-    if(repeats%2!==0)firstHalf.push(balloons.slice(0,balloonLen/2))
-    
-    let firstVals = firstHalf.values()
-    let currVal = firstVals.next()
+        firstHalf = [],
+        firstVals = firstHalf.values(),
+        currVal = balloons[count%balloonLen]
 
     do{
-        if(bolts[count % 3] !== currVal.value){
+        let val = currVal.value ?? currVal
+        if(bolts[count % 3] !== val){
             firstHalf.push(balloons[secondHalfInd%balloonLen])
-            firstVals.next()
             count++
+            if(count>=halfLen) firstVals.next()
         } 
         count++
         secondHalfInd++
-        currVal = firstVals.next()
+        currVal = count<halfLen ? balloons[count%balloonLen] : firstVals.next()
     } while (!currVal.done)
 
     return count
 }
 
-console.log('Part 2 ',solve(input2,100))
-console.log('Part 3 ',solve(input3,100000))
+console.log('Part 2 ',solve2(input2,100))
+console.log('Part 3 ',solve2(input3,100000)) // ~200ms
