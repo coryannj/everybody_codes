@@ -1,252 +1,163 @@
 const { dir, group } = require('console');
 const fs = require('fs');
-const input1 = fs.readFileSync('../quest16_1.txt',{ encoding: 'utf8', flag: 'r' });
-const input2 = fs.readFileSync('../quest16_2.txt',{ encoding: 'utf8', flag: 'r' });
-const input3 = fs.readFileSync('../quest16_3.txt',{ encoding: 'utf8', flag: 'r' });
+const input1 = fs.readFileSync('../inputs/everybody_codes/2024/quest16_1.txt',{ encoding: 'utf8', flag: 'r' });
+const input2 = fs.readFileSync('../inputs/everybody_codes/2024/quest16_2.txt',{ encoding: 'utf8', flag: 'r' });
+const input3 = fs.readFileSync('../inputs/everybody_codes/2024/quest16_3.txt',{ encoding: 'utf8', flag: 'r' });
 
-// Part 1
+const parse = (input,partNo) =>{
+    let [turns,reels] = input.split(/\n\n/)
+    turns = turns.split(',').map(Number)
 
-const parseReels = (input) => {
-    let lines = input.split(/\n\n/)
-    let pull = lines[0].split(',').map(Number)
-    let reels = lines[1].split(/[\r\n]+/).map((x)=>x.match(/([\S]{3}(?:[\s]|$)|[\s]{3}(?:[\s]|$))/gm)).map((x)=>x.map((y)=>y.trim()))
-    let reelCount = reels[0].length
-    
-    let reelsMap = Array(reelCount).fill('.').map((x,ix)=>reels.map((y)=>y[ix])).map((x)=>{
-        return x.filter((y)=>y.length>0)
-    })
+    reels = reels.split(/[\r\n]/).map((x)=>`${x} `.match(/[\s\S]{4}/g))
 
-    return [pull,reelsMap]
+    reels = reels[0].map((x,xi)=>reels.flatMap((y)=>y[xi] !== undefined && y[xi][0] !== ' ' ? [y[xi].trim()] : []))
+
+    if(partNo>1) reels = reels.map((x)=>x.map((y)=>`${y[0]}${y[2]}`)) // Remove muzzles for p2/p3
+
+    return [turns.map((x,xi)=>[x,reels[xi].length]),reels]
 }
 
-let [pull1,reels1] = parseReels(input1)
+const roll = (inds,turns) => inds.map((x,xi)=>(x+turns[xi][0])%turns[xi][1])
 
-console.log(reels1.map((x,ix)=>x[(100*pull1[ix])%x.length]).join(' '))
+const getScore = (inds,reels) => {
+    let str = reels.map((x,xi)=>x[inds[xi]]).join('')
+
+    let counts = {}
+    
+    for(const s of str){
+        counts[s] = (counts[s] ?? 0)+1
+    }
+    
+    return Object.values(counts).filter((x)=>x>=3).reduce((a,c)=> a+(c-2),0)
+}
+
+// Part 1
+let [t1,r1] = parse(input1,1)
+console.log('Part 1 ',r1.map((x,xi)=>x[(100*t1[xi][0])%t1[xi][1]]).join(''))
 
 // Part 2
 
-let [pull2,reels2] = parseReels(input2)
-let seen = {}
-let pullNo = 1
-let reelInd = reels2.map((x,ix)=> (pullNo*pull2[ix])%x.length)
+let [t2,r2] = parse(input2,2)
+let cycleInds = t2.map((x)=>0)
+let cycleCoins = []
 
-while(!seen[reelInd.join(' ')]){
-   seen[reelInd.join(' ')] = true
-   pullNo++
-   reelInd = reels2.map((x,ix)=> (pullNo*pull2[ix])%x.length)
-}
+do{
+    cycleInds = roll(cycleInds,t2)
+    cycleCoins.push(getScore(cycleInds,r2))
+} while (cycleInds.some((x)=>x > 0))
 
-pullNo--
-let cycleObj = {}
+let cycleLen = cycleCoins.length
+let cycleTotal = cycleCoins.reduce((a,c)=>a+c)
+let noCycles = Math.floor(202420242024/cycleLen)
+let baseTotal = noCycles*cycleTotal
+let remainder = cycleCoins.slice(0,(202420242024%cycleLen)).reduce((a,c)=>a+c,0)
 
-for(i=1;i<=pullNo;i++){
-    let results = reels2.map((x,ix)=>x[(i*pull2[ix])%x.length])
-    let removeMuzzles = results.map((x)=>`${x[0]}${x[2]}`)
-    let result = removeMuzzles.join('').split('').reduce((obj, symbol) => {
-        const count = obj[symbol] || 0
-        return { ...obj, [symbol]: count + 1 }
-      }, {})
-    
-    let eyes = Object.entries(result).filter(([key,val])=>val>=3)
-    let pullCount = 0
-
-    if(eyes.length>0){
-        eyes.forEach(([k,v])=>pullCount+=1+(v-3));
-        cycleObj[i] = pullCount
-    } else {
-        cycleObj[i] = 0
-    }
-}
-
-let cycleCoins = Object.values(cycleObj).reduce((acc,curr)=>acc+curr);
-let pullCounter = 202420242024;
-let cycles = Math.floor(pullCounter/pullNo);
-let remainder = pullCounter%pullNo;
-let remainderCount = Object.values(cycleObj).slice(0,remainder).reduce((acc,curr)=>acc+curr);
-
-console.log((cycles*cycleCoins)+remainderCount)
+console.log('Part 2', baseTotal+remainder)
 
 // Part 3
-let [pull3,reels3] = parseReels(input3)
-reels3 = reels3.map((x)=>x.map((y)=>`${y[0]}${y[2]}`))
-let reelCount3 = reels3[0].length
-let reels3Len= reels3.map((x)=>x.length)
-console.log(reels3,reelCount3,reels3Len)
-let allIndexes = reels3Len.map((x)=>Array(x).fill('.').map((y,yx)=>yx))
-console.log(allIndexes)
-//let leftPull = [-1,0,1]
+let
+    [t3,r3] = parse(input3,3),
+    p3count = 256,
+    reelLen = t3.length,
+    startInds = t3.map((x)=>0),
+    opts = [-1,0,1].map((x)=>t3.map((y)=>y[1]+x)),
+    startKey = startInds.join('_'),
+    seen = new Set([startKey]),
+    allCombos = [startInds],
+    queue = [startInds],
+    rounds = 0,
+    p3Scores = {}
 
-// Generate cartesian product of given iterables:
-function* cartesian(head, ...tail) {
-    const remainder = tail.length > 0 ? cartesian(...tail) : [[]];
-    for (let r of remainder) for (let h of head) yield [h, ...r];
-  }
-  
-  // Example:
-  //console.log(...cartesian(...allIndexes));
-
-let q = cartesian(...allIndexes)
-let qItem = q.next()
-console.log(qItem)
-
-let machine = {}
-let counter = 0
-do{
-    counter++
-    let reel = qItem.value
-
-
-
-    machine[reel.join('-')] = {
-        'leftpull':reel.map((x,ix)=> x===0 ? reels3Len[ix]-1 : x-1).join('-'),
-        'leftpush':reel.map((x,ix)=>x+1===reels3Len[ix] ? 0 : x+1).join('-'),
-        'rightpull':reel.map((x,ix)=>(x+pull3[ix])%reels3Len[ix]).join('-'),
-        'beforeright':reels3.map((x,ix)=>x[reel[ix]]).join(''),
-
-    }
-    //console.log(machine[reel.join('-')])
-    machine[reel.join('-')]['afterright']=reels3.map((x,ix)=>x[ machine[reel.join('-')]['rightpull'].split('-')[ix]]).join('')
-
-
-    machine[reel.join('-')]['aftercounts']=machine[reel.join('-')]['afterright'].split('').reduce((obj, symbol) => {
-        const count = obj[symbol] || 0
-        return { ...obj, [symbol]: count + 1 }
-      }, {})
-
-
-
-      let coinTotal = 0
-        
-      let counts = Object.values(machine[reel.join('-')]['aftercounts']).filter((x)=>x>=3)
-  
-      if(counts.length > 0){
-          counts.forEach((v)=>coinTotal+=1+(v-3))
-      }      
-      machine[reel.join('-')]['afterscore'] = coinTotal
-
-
-    qItem = q.next()
-
-    if(counter%1000000===0){
-        console.log('counter is ',counter)
-    }
-
-}while(qItem.done !== true)
-
-
-console.log(machine)
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-let queue = [Array(reelCount3).fill('.').map((x)=>0)].flatMap((x,ix)=>[-1,0,1].map((y,yx)=>x.map((z,zx)=>{    
-    if(z+y<0){
-        return reels3Len[zx]-1
-    }else if(z+y===reels3Len[zx]){
-        return 0
+const p3GetScore = (inds) => {
+    let key = inds.join('_')
+    if(p3Scores[key] !== undefined){
+        return p3Scores[key]
     } else {
-        return z+y
+        let result = getScore(inds,r3)
+        p3Scores[key] = result
+        return result
     }
-})))
-
-console.log(queue)
-
-// queue = queue.flatMap((x,ix)=>leftPull.map((y,yx)=>x.map((z,zx)=>{    
-//     if(z+y<0){
-//         return reels3Len[zx]-1
-//     }else if(z+y===reels3Len[zx]){
-//         return 0
-//     } else {
-//         return z+y
-//     }
-// })))
-
-const leftPull = (queueArr) => {
-    let first = queueArr[0].map((x,ix)=>x===0 ? reels3Len[ix]-1 : x-1)
-    let last = queueArr.at(-1).map((x,ix)=>x+1===reels3Len[ix] ? 0 : x+1)
-    
-    queueArr.unshift(first)
-    queueArr.push(last)
-    return queueArr
-
-    // return queueArr.flatMap((x,ix)=>[-1,0,1].map((y,yx)=>x.map((z,zx)=>{    
-    //     if(z+y<0){
-    //         return reels3Len[zx]-1
-    //     }else if(z+y===reels3Len[zx]){
-    //         return 0
-    //     } else {
-    //         return z+y
-    //     }
-    // })))
 }
 
-let countObj = {}
-let pullCount3 = 11
-let counter3 = 0
-let p3min = 0
-let p3max = 0
+p3GetScore(startInds)
 
-const getCoins = (indexes,pulls,reels,reelLen) => {
-    
-    let newIndexes = indexes.map((x,ix)=>(x+pulls[ix])%reelLen[ix])
-    console.log('indexes,pulls,reelLen,newIndexes ',indexes,pulls,reelLen,newIndexes)
-    
-    if(countObj[newIndexes.join('-')] !== undefined){
-        return [newIndexes,countObj[newIndexes.join('-')]]
-    } else {
-        
-        let spin = reels.map((x,ix)=>x[newIndexes[ix]]).join('').split('').reduce((obj, symbol) => {
-            const count = obj[symbol] || 0
-            return { ...obj, [symbol]: count + 1 }
-          }, {})
-        console.log('getcoins', indexes,newIndexes,pulls,spin)
-    
-        let coinTotal = 0
-        
-        let counts = Object.values(spin).filter((x)=>x>=3)
-    
-        if(counts.length > 0){
-            counts.forEach((v)=>coinTotal+=1+(v-3))
+const p3Roll = (inds) => opts.map((x,xi)=> roll(x.map((y,yi)=>y+inds[yi]),t3))
+
+const getMaxMin = (inds,type) => {
+    let scores = p3Roll(inds).map((x)=> p3GetScore(x))
+    return type === 'min' ? Math.min(...scores) : Math.max(...scores)
+}
+
+// Not bonkers recursive solution
+let memo = {}
+
+const findMaxMin = (inds,type,pulls) => {
+    let key = `${inds.join('_')}_${type}_${pulls}`
+
+    if(memo[key]) return memo[key];
+
+    if(pulls === 1){
+        let lastMaxMin = getMaxMin(inds,type)
+        memo[key] = lastMaxMin
+        return lastMaxMin
+    } 
+
+    let nextRoll = p3Roll(inds).map((x)=> p3GetScore(x) + findMaxMin(x,type,pulls-1))
+
+    let thisMinMax = type === 'min' ? Math.min(...nextRoll) : Math.max(...nextRoll)
+
+    memo[key] = thisMinMax
+
+    return thisMinMax
+}
+
+console.log('Part 3 ',[findMaxMin(startInds,'max',256),findMaxMin(startInds,'min',256)].join(' '))
+
+// Slightly bonkers solution
+
+// Get list of seen reels
+// There's 94 million possible combinations, but only ~27000 seen when doing 256 rounds
+while(rounds<p3count && queue.length>0){
+    let newQueue = []
+    queue.forEach((inds)=>{
+        p3Roll(inds).forEach((x)=>{
+            let k = x.join('_')
+
+            if(!seen.has(k)){
+                seen.add(k)
+                newQueue.push(x)
+                allCombos.push(x)
+                //p3Scores[k] = p3GetScore(x) // if not running after recursion solution
+            }
+        })
+    })
+    rounds++
+    queue = newQueue
+    //console.log(rounds,queue.length)
+}
+
+// Work backwards - start with min/max for 1 roll, then use that to build all outcomes for 2 rolls etc for all combos
+const p3MaxMin = (inds) => p3Roll(inds).map((x)=> p3Scores[x.join('_')] ?? p3GetScore(inds)).sort((a,b)=>b-a).filter((x,xi)=>xi!==1)
+
+let allMaxMin = Object.fromEntries(allCombos.map((x)=>[`${x.join('_')}_1`,p3MaxMin(x)]))
+
+for(i=2;i<=p3count;i++){
+    let newObj = {}
+
+    Object.keys(allMaxMin).map((x)=>x.split('_').slice(0,reelLen).map(Number)).forEach((inds)=>{
+        let thisRoll = p3Roll(inds)
+        let thisScores = thisRoll.map((x)=>p3Scores[x.join('_')])
+        let nextRoll = thisRoll.map((x,xi)=> allMaxMin[`${x.join('_')}_${i-1}`])
+
+        if(!thisScores.some((x)=>x === undefined) && !nextRoll.flat().some((x)=>isNaN(x))){
+
+            let combined = nextRoll.map((x,xi)=>x.map((y)=>y+thisScores[xi]))
+                
+            newObj[`${inds.join('_')}_${i}`] = combined.reduce((a,c)=>[Math.max(a[0],c[0]),Math.min(a[1],c[1])],[0,9999999])            
         }
+    })
     
-        countObj[newIndexes.join('-')] = coinTotal
-        return [newIndexes,coinTotal]
-    }
-    
-    
-
-
+    allMaxMin = newObj
 }
 
-while(counter3<pullCount3){
-    //queue = leftPull(queue)
-    console.log('NEW LINE queue leftPull is ',queue)
-    let newQueue = queue.map((x)=>getCoins(x,pull3,reels3,reels3Len))
-    let [cmin,cmax] = newQueue.map((x)=>x[1]).sort((a,b)=>a-b).filter((x,ix,arr)=>ix === 0 || ix===arr.length-1)
-    console.log('newqueue output',newQueue)
-    p3min+=cmin
-    p3max+=cmax
-    console.log(counter3,'coins is', [cmin,cmax], 'p3 min max is ',[p3min,p3max])
-    
-    //queue = newQueue.map((x)=>x[0])
-    queue = leftPull(newQueue.map((x)=>x[0]))
-    console.log('newQueue is ',queue)
-
-    counter3++
-}
-
+console.log('Part 3 ',allMaxMin[`${startKey}_${p3count}`].join(' '))
