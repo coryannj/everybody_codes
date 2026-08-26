@@ -9,12 +9,21 @@ console.log(lines)
 
 let points = []
 let gaps = []
-
+let gaps2 = []
 lines.forEach((v)=>{
     let [x,y,z] = v
+    let gapObj = {
+        col: x,
+        gap: Array(z).fill(y).map((x,i)=>i+y),
+        start: null,
+        end: null
+    }
+    gaps2.push(gapObj)
+
     if(y>0){
         points.push([[x,y-1],[x,y+z]])
         gaps.push([[x,y],[x,y+z-1]])
+        
     } else {
         points.push([[x,0],[x,z]])
         gaps.push([[x,0],[x,z-1]])
@@ -23,8 +32,11 @@ lines.forEach((v)=>{
     
 })
 
+gaps2.unshift({col:0,gap:Infinity,start:[0,0],end:null})
+
 console.log(points)
 console.log(gaps)
+console.log(gaps2)
 
 let curr = [0,0]
 let flaps = 0
