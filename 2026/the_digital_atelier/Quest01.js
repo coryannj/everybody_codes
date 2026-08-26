@@ -16,17 +16,15 @@ const goForwards = (curr,jump,seen,jumps,partNo) => {
 
     let result
 
-    if(partNo === 2 || !jumps.some((j)=>j.includes(curr))){
-        let max = partNo === 2 ? Infinity : jumps.findLast(([a,b])=> a < curr && b > curr)?.[1] || Infinity
+    let max = partNo === 2 ? Infinity : jumps.findLast(([a,b])=> a < curr && b > curr)?.[1] || Infinity
 
-        while(loopTest(partNo)){
-            jump++
-            if(curr+jump >= max) break;
-        }
-
-        if(curr+jump<max) result = curr+jump
+    while(loopTest(partNo)){
+        jump++
+        if(curr+jump >= max) break;
     }
 
+    if(curr+jump<max) result = curr+jump
+    
     return result
 }
 
@@ -40,7 +38,6 @@ const solve = (input,partNo) => {
         let seen = new Set([curr])
 
         for (const jump of line){
-
             let newCurr = goBackwards(curr,jump,seen,allJumps[count%2],partNo) ?? goForwards(curr,jump,seen,allJumps[count%2],partNo)
 
             if(newCurr){
