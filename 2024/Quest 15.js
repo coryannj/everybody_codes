@@ -92,7 +92,7 @@ const makeGrid = (input,partNo) => {
 }
 
 //let g = makeGrid(input1)
-//console.log(g)
+console.log(g)
 //console.log(Object.groupBy(g[0],({ row,col }) => [row,col].join('_')))
 
 const solve = (input,partNo) => {
