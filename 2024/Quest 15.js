@@ -4,86 +4,41 @@ const input1 = fs.readFileSync('../inputs/everybody_codes/2024/quest15_1.txt', {
 const input2 = fs.readFileSync('../inputs/everybody_codes/2024/quest15_2.txt', { encoding: 'utf8', flag: 'r' })
 const input3 = fs.readFileSync('../inputs/everybody_codes/2024/quest15_3.txt', { encoding: 'utf8', flag: 'r' })
 
-// Generate cartesian product of given iterables:
-
-function* cartesian(head, ...tail) {
-	const remainder = tail.length > 0 ? cartesian(...tail) : [[]]
-	for (let r of remainder) {
-		for (let h of head) {
-			//console.log('h',h,' r',r)
-			yield [h, ...r]
-		}
-	}
-}
-let sides = [
-	[[0, 1]],
-	[
-		[0, 1],
-		[1, 0]
-	],
-	[
-		[0, 1],
-		[1, 0]
-	],
-	[[0, 0]]
-]
-console.log([...cartesian(...sides)])
-
-const neighbours = (r, c) => [
-	[r + 1, c],
-	[r - 1, c],
-	[r, c + 1],
-	[r, c - 1]
-]
-
-const makeRange = (n1, n2) =>
-	Array(Math.abs(n1 - n2) + 1)
-		.fill(Math.min(n1, n2))
-		.map((x, i) => x + i)
-
 const makeGrid = (input, partNo) => {
-	//if(partNo === 3) input = input.replaceAll(/[ER]/g,'.').replace('K','L')
-	if (partNo === 3) input = input.replaceAll(/[EKR]/g, '.')
-	let herbs = Object.fromEntries(
-		'ABCDEFGHIJKLMNOPQRSTUVWXYZ'
-			.split('')
-			.filter((x) => input.includes(x))
-			.map((x, i) => [x, { value: x, bits: parseInt('1'.padEnd(i + 1, '0'), 2) }])
-	)
+	if (partNo === 3) input = input.replaceAll(/[EKR]/g, '.') // Slight cheating - removes herbs on single path between cols and makes the only segments with multiple herbs the 'last' segment of each column
 
 	let lines = input.split(/[\r\n]+/).map((x) => x.split(''))
 
+	// Get start/end row indexes for the segment 'rows' - need to do this before blocking deadends
 	let segments = lines
 		.flatMap((x, xi) => (x.join('').includes('##########') ? [xi] : []))
 		.map((x, xi, a) => [x, a?.[xi + 1]])
 		.slice(0, -1)
 
-	let deadEnds = lines.flatMap((r, ri) =>
-		r.flatMap((c, ci) =>
-			ri > 0 &&
-			c === '.' &&
-			neighbours(ri, ci).filter(([nr, nc]) => lines?.[nr]?.[nc] && lines[nr][nc] !== '#' && lines[nr][nc] !== '~')
-				.length <= 1
-				? [[ri, ci]]
-				: []
-		)
-	)
-
-	while (deadEnds.length) {
-		deadEnds.forEach(([r, c]) => {
-			lines[r][c] = '#'
-		})
-		deadEnds = lines.flatMap((r, ri) =>
-			r.flatMap((c, ci) =>
-				ri > 0 &&
-				c === '.' &&
-				neighbours(ri, ci).filter(([nr, nc]) => lines?.[nr]?.[nc] && lines[nr][nc] !== '#' && lines[nr][nc] !== '~')
-					.length <= 1
-					? [[ri, ci]]
-					: []
-			)
-		)
+	const neighbours = (r, c, joinKeys = false) => {
+		let n = [
+			[r + 1, c],
+			[r - 1, c],
+			[r, c + 1],
+			[r, c - 1]
+		].filter(([nr, nc]) => lines?.[nr]?.[nc] && lines[nr][nc] !== '#' && lines[nr][nc] !== '~')
+		return joinKeys ? n.map((x) => x.join('_')) : n
 	}
+
+	const fixDeadends = (r, c) => {
+		if (r > 0 && lines[r][c] === '.') {
+			let n = neighbours(r, c)
+			if (n.length <= 1) {
+				lines[r][c] = '#'
+
+				n.forEach(([nr, nc]) => {
+					fixDeadends(nr, nc)
+				})
+			}
+		}
+	}
+
+	lines.forEach((r, ri) => r.forEach((c, ci) => fixDeadends(ri, ci)))
 
 	let segmentCols =
 		partNo < 3
@@ -93,38 +48,41 @@ const makeGrid = (input, partNo) => {
 					.map((x, xi, a) => [x, a?.[xi + 1]])
 					.slice(0, -1)
 
-	let grid = []
+	let herbs = {}
+	let grid = lines.flatMap((row, rowInd) => {
+		return row.flatMap((val, colInd) => {
+			if (val === '#' || val === '~') return []
 
-	lines.forEach((row, rowInd) => {
-		row.forEach((val, colInd) => {
-			if (val !== '#' && val !== '~') {
-				gridObj = {
-					key: `${rowInd}_${colInd}`,
-					row: rowInd,
-					col: colInd,
-					value: val,
-					segmentRow: segments.flatMap(([s, e], xi) => (s <= rowInd && rowInd <= e ? [xi] : [])),
-					segmentCol: segmentCols.flatMap(([s, e], xi) => (s <= colInd && colInd <= e ? [xi] : [])),
-					herbScore: val === '.' ? 0 : herbs[val]['bits'],
-					neighbours: neighbours(rowInd, colInd).flatMap(([r, c]) =>
-						lines?.[r]?.[c] && lines[r][c] !== '#' && lines[r][c] !== '~' ? [[r, c]] : []
-					)
-				}
-
-				gridObj['nKeys'] = new Set(gridObj.neighbours.map((x) => x.join('_')))
-				if (partNo > 1 && val !== '.' && !herbs[val]['segmentCol']) {
-					herbs[val]['segmentCol'] = gridObj.segmentCol[0]
-					herbs[val]['segmentRow'] = gridObj.segmentRow[0]
-				}
-
-				grid.push(gridObj)
+			let gridObj = {
+				key: `${rowInd}_${colInd}`,
+				row: rowInd,
+				col: colInd,
+				value: val,
+				segmentRow: segments.flatMap(([s, e], xi) => (s <= rowInd && rowInd <= e ? [xi] : [])),
+				segmentCol: segmentCols.flatMap(([s, e], xi) => (s <= colInd && colInd <= e ? [xi] : [])),
+				neighbours: new Set(neighbours(rowInd, colInd, true))
 			}
+
+			if (val !== '.') {
+				if (!herbs[val]) {
+					herbs[val] = {
+						value: val,
+						segmentCol: gridObj.segmentCol[0],
+						segmentRow: gridObj.segmentRow[0],
+						keys: [gridObj.key]
+					}
+				} else {
+					herbs[val]['keys'].push(gridObj.key)
+				}
+			}
+
+			return [gridObj]
 		})
 	})
 
 	return [
 		grid,
-		herbs,
+		Object.values(herbs),
 		segmentCols,
 		segments.map((x, xi) =>
 			Object.fromEntries([
@@ -135,21 +93,21 @@ const makeGrid = (input, partNo) => {
 	]
 }
 
-//console.log(makeGrid(input3,3).at(-1))
-
 const bfs = (startKey, endKeys, gridKeys, mergeKeys = false) => {
-	let seen = new Set([startKey])
-	let queue = new Set([startKey])
-	let result = {}
-	let steps = 1
-	endKeys = endKeys.filter(
-		(ek) => startKey !== ek && (gridKeys[ek]['value'] === '.' || gridKeys[ek]['value'] !== gridKeys[startKey]['value'])
+	let seen = new Set([startKey]),
+		queue = new Set([startKey]),
+		result = {},
+		steps = 1
+
+	endKeys = [...new Set(endKeys)].filter(
+		(ek) => ek !== startKey && (gridKeys[ek]['value'] === '.' || gridKeys[ek]['value'] !== gridKeys[startKey]['value'])
 	)
 
 	while (endKeys.some((x) => (mergeKeys ? !result[`${startKey}|${x}`] : !result[x]))) {
 		newQueue = new Set()
 		queue.values().forEach((k) => {
-			gridKeys[k]['nKeys'].values().forEach((nk) => {
+			if (!gridKeys?.[k]?.['neighbours']) console.log(k, gridKeys[k])
+			gridKeys[k]['neighbours'].values().forEach((nk) => {
 				if (!seen.has(nk)) {
 					seen.add(nk)
 					if (endKeys.includes(nk)) {
@@ -168,262 +126,212 @@ const bfs = (startKey, endKeys, gridKeys, mergeKeys = false) => {
 	return result
 }
 
-// const solvep1 = () => {
-//     let [grid] = makeGrid(input1,1)
-//     let startPos = grid.find((o)=>o.row === 0).key
-//     let herbKeys = grid.flatMap((x)=>x.herbScore>0 ? [x.key] : [])
-//     let herbSteps = bfs(startPos,herbKeys,Object.groupBy(grid,({key})=>key),true)
-//     return Math.min(...Object.values(herbSteps))*2
-// }
+const solveP1 = () => {
+	let [grid, herbs] = makeGrid(input1, 1)
+	let startPos = grid.find((o) => o.row === 0).key
+	let herbKeys = herbs[0].keys
+	let herbSteps = bfs(startPos, herbKeys, Object.fromEntries(grid.map((o) => [o.key, o])), true)
+	return Math.min(...Object.values(herbSteps)) * 2
+}
 
-// console.log('P1',solvep1())
+const mergePaths = (prev, next) => {
+	let newObj = {}
 
-const solve = (input, partNo) => {
+	Object.entries(prev).forEach(([pk, pv]) => {
+		let [start, end, currScore] = pk.split('|')
+
+		Object.entries(next).forEach(([nextScore, nObj]) => {
+			Object.entries(nObj).forEach(([nk, nv]) => {
+				let [nStart, nEnd] = nk.split('|')
+				let newKey = `${start}|${nEnd}|${currScore}${nextScore}`
+				if (end === nStart && (!newObj[newKey] || newObj[newKey] > pv + nv)) {
+					newObj[newKey] = pv + nv
+				}
+			})
+		})
+	})
+
+	return newObj
+}
+
+const sumHerbs = (h1, h2) => (parseInt(h1, 2) | parseInt(h2, 2)).toString(2).padStart(h1.length, '0')
+
+const singleHerbPath = (herbKeys, entrances, exits, gridObj) => {
+	return herbKeys.reduce(
+		(distances, hKey) => {
+			let hDistances = bfs(hKey, entrances.concat(exits), gridObj)
+			Object.keys(distances).forEach((dk) => {
+				let [s, e] = dk.split('|')
+				distances[dk] = Math.min(distances[dk], hDistances[s] + hDistances[e])
+			})
+
+			return distances
+		},
+		Object.fromEntries(entrances.flatMap((x) => exits.flatMap((y) => `${x}|${y}`)).map((x) => [x, Infinity]))
+	)
+}
+
+const solveP2P3 = (input, partNo) => {
 	let [grid, allHerbs, cols, segments] = makeGrid(input, partNo)
 
 	let total = 0
 
 	cols.forEach(([cs, ce], colInd) => {
-		let colKeys = grid.filter((o) => o.segmentCol.includes(colInd)),
-			startPos = colKeys.find((o) => o.row === 0) || colKeys.find((o) => [cs, ce].includes(o.col)),
-			startFromTop = startPos.row === 0,
+		let startFromTop = grid.some((o) => o.key.startsWith('0') && o.segmentCol.includes(colInd)),
 			rows = startFromTop ? segments : segments.toReversed()
-		//console.log(colInd,[cs,ce])
+
 		rows = rows.map((o, i) => {
 			let [s, e] = startFromTop ? o.rowInds : o.rowInds.toReversed()
-			o.keys = colKeys.filter((k) => k.segmentRow.includes(o.segmentRow))
+			o.keys = grid.filter((g) => g.segmentCol.includes(colInd) && g.segmentRow.includes(o.segmentRow))
 			o.obj = Object.fromEntries(o.keys.map((k) => [k.key, k]))
-			o.entrances = o.keys.filter((k) => k.row === s || (i === 0 && (k.col === cs || k.col === ce)))
-			o.exits = o.keys.filter((k) => k.row === e)
-			o.herbs = Object.values(allHerbs).filter((k) => k.segmentCol === colInd && k.segmentRow === o.segmentRow)
-			o.herbTotal = o.herbs.map((k) => k.bits).reduce((a, c) => a ^ c, 0)
+			o.entrances = o.keys.flatMap((k) =>
+				k.row === s || (!startFromTop && (k.col === cs || k.col === ce)) ? [k.key] : []
+			)
+			o.exits = o.keys.flatMap((k) => (k.row === e ? [k.key] : []))
+			o.herbs = allHerbs.filter((k) => k.segmentCol === colInd && k.segmentRow === o.segmentRow)
+			o.sameColExit = o.herbs.length
+				? [...new Set(o.herbs.flatMap((h) => h.keys.map((hk) => hk.split('_')[1])))].every((hk) =>
+						o.entrances.some((ek) => ek.endsWith(`${+hk - 1}`) || ek.endsWith(`${+hk + 1}`))
+					)
+				: false
 			return o
 		})
 
-		let r = rows
-			.slice(0, -1)
-			.map(({ keys, obj, entrances, exits, herbs, herbTotal }) => {
-				let rPaths = {}
+		let lastRow = rows.pop()
 
-				// Paths with herb
-				if (herbs.length) {
-					let herbKeys = keys.filter((k) => k.value === herbs[0].value)
-					let herbCols = new Set(herbKeys.map((k) => k.col))
-					let sameColExit =
-						herbCols.size === 2 && entrances.some((k) => herbCols.has(k.col - 1) || herbCols.has(k.col + 1))
-					let hEntrances = entrances
-					let hExits = exits
-
-					if (sameColExit) {
-						hEntrances = entrances.filter((k) => herbCols.has(k.col - 1) || herbCols.has(k.col + 1))
-						hExits = exits.filter((k) => herbCols.has(k.col - 1) || herbCols.has(k.col + 1))
-					}
-
-					let herbPaths = [
-						...cartesian(
-							hEntrances.map((k) => k.key),
-							hExits.map((k) => k.key)
-						)
-					].filter((k) => !sameColExit || new Set(k.map((v) => v.split('_')[1])).size === 1)
-					//console.log(h)
-					let herbDistances = herbKeys.reduce(
-						(h, x) => {
-							let distances = bfs(
-								x.key,
-								entrances.concat(exits).map((k) => k.key),
-								obj
-							)
-							herbPaths.forEach(([hs, he]) => {
-								h[`${hs}|${he}`] = Math.min(h[`${hs}|${he}`], distances[hs] + distances[he])
-								//if(distances[hs]+distances[he]<h[`hs_he`])
-							})
-							return h
-						},
-						Object.fromEntries(herbPaths.map(([hs, he]) => [`${hs}|${he}`, Infinity]))
-					)
-
-					//herbKeys.map((x)=>[x.key,bfs(x.key,entrances.concat(exits).map((k)=>k.key),obj)])
-					//console.log(sameColExit,herbPaths.filter((k)=>!sameColExit || new Set(k.map((v)=>v.split('_')[1])).size === 1))
-					//console.log(herbDistances)
-					rPaths[1] = herbDistances
-				}
-				rPaths[0] = entrances.reduce((eObj, k) => {
-					return {
-						...eObj,
-						...bfs(
-							k.key,
-							exits.map((v) => v.key),
-							obj,
-							true
-						)
-					}
+		// Calculate all combos of traversing all prior segments (except last) with/without herb
+		let subPaths = rows.reduce((paths, { keys, obj, entrances, exits, herbs, sameColExit }, i) => {
+			let rPaths = [
+				entrances.reduce((eObj, k) => {
+					return { ...eObj, ...bfs(k, exits, obj, true) }
 				}, {})
+			]
 
-				// Object.keys(rPaths[0]).forEach((k)=>{
-				//     if(rPaths?.[1]?.[k] && rPaths[1][k]<rPaths[0][k]){
-				//         console.log('smaller',rPaths[0][k],rPaths[1][k])
-				//         rPaths[0][k] = rPaths[1][k]
-				//     }
-				// })
-
-				return rPaths
-				// Paths without herb
-				//console.log(herbs,rPaths)
-			})
-			.reduce((sObj, paths) => {
-				if (!Object.keys(sObj).length) {
-					console.log(paths)
-					return Object.fromEntries(
-						Object.entries(paths).flatMap(([score, p]) => Object.entries(p).flatMap(([k, v]) => [[`${k}|${score}`, v]]))
+			if (herbs.length) {
+				if (sameColExit) {
+					rPaths.push(
+						Object.fromEntries(
+							Object.entries(rPaths[0])
+								.filter(([k, v]) => {
+									let [s, e] = k.split('|').map((ek) => ek.split('_')[1])
+									return s === e && herbs[0].keys.some((hk) => hk.endsWith(+s + 1) || hk.endsWith(+s - 1))
+								})
+								.map(([k, v]) => [k, v + 2])
+						)
 					)
 				} else {
-					let newObj = {}
-
-					Object.entries(sObj).forEach(([sk, sv]) => {
-						let [start, end, currScore] = sk.split('|')
-
-						Object.entries(paths).forEach(([score, scoreObj]) => {
-							Object.entries(scoreObj).forEach(([k, v]) => {
-								let [nStart, nEnd] = k.split('|')
-								let newKey = `${start}|${nEnd}|${currScore}${score}`
-								if (end === nStart && (!newObj[newKey] || newObj[newKey] > sv + v)) {
-									newObj[newKey] = sv + v
-								}
-							})
-						})
-					})
-
-					return newObj
+					rPaths.push(singleHerbPath(herbs[0].keys, entrances, exits, obj))
 				}
-			}, {})
-		console.log(r)
 
-		const lastSegment = ({ keys, obj, entrances, exits, herbs, herbTotal }) => {
-			let poi = keys.filter((k) => k.col === cs || k.col === ce)
-			//let poi = []
-			let herbKeys = keys.filter((k) => k.value !== '.')
-			//console.log('entrances',entrances)
-			//console.log(poi,herbKeys)
-			let distances = herbKeys
-				.concat(poi)
-				.map((k) =>
-					bfs(
-						k.key,
-						entrances.concat(exits, herbKeys, poi).map((v) => v.key),
-						obj,
-						true
-					)
-				)
-				.reduce((a, c) => {
-					return { ...a, ...c }
-				}, {})
-			//console.log(distances)
-
-			let lPaths = {}
-			let eKeys = entrances.map((k) => k.key)
-			let toEntrances = Object.entries(distances).filter(([dk, dv]) => eKeys.includes(dk.split('|')[1]))
-
-			let queue = entrances
-				.flatMap((ek) => Object.entries(distances).filter(([dk, dv]) => dk.endsWith(ek.key)))
-				.map(([dk, dv]) => {
-					let firstNode = obj[dk.split('|')[0]]['value']
-
-					return [[dk], firstNode === '.' ? [] : [firstNode], dv, dk.split('|').toReversed().join('|')]
-
-					//{ steps: dv, seen: new Set(dk),last}
+				Object.entries(rPaths[1]).forEach(([k, v]) => {
+					if (rPaths[0]?.[k] && rPaths[0][k] >= v) {
+						delete rPaths[0][k]
+					}
 				})
-			if (colInd === 1) {
-				console.log('cs,ce', cs, ce)
-				console.log('poi', poi)
-				console.log('herbkeys', herbKeys)
-				console.log('entrances', entrances)
-				console.log('ekeys', eKeys)
-				console.log('queue', queue)
 			}
-			allToVisit = poi.concat(herbKeys).map((p) => p.key)
+
+			return i === 0
+				? Object.fromEntries(
+						Object.entries(rPaths).flatMap(([score, p]) =>
+							Object.entries(p).flatMap(([k, v]) => [[`${k}|${score}`, v]])
+						)
+					)
+				: mergePaths(paths, rPaths)
+		}, {})
+
+		// Filter paths where equal or shorter paths have more herbs
+		subPaths = Object.entries(subPaths).filter(([k, v], i, a) => {
+			let [s, e, score] = k.split('|')
+			return !a.some(([ak, av]) => {
+				let [as, ae, aScore] = ak.split('|')
+				return ak !== k && e === ae && av <= v && sumHerbs(score, aScore) === aScore
+			})
+		})
+
+		// Process all combos for last segment
+		const lastPaths = ({ keys, obj, entrances, exits, herbs, sameColExit }) => {
+			let herbKeys = herbs.flatMap((h) => h.keys),
+				poi = colInd === 1 ? keys.filter((k) => k.col === cs || k.col === ce).map((k) => k.key) : [],
+				startKeys = herbKeys.concat(poi),
+				distances = startKeys.reduce((a, c) => {
+					return { ...a, ...bfs(c, entrances.concat(startKeys), obj, true) }
+				}, {}),
+				len = herbs.length + poi.length + 1,
+				result = {}
+
+			if (len === 2) return singleHerbPath(herbKeys, entrances, entrances, obj)
+
+			let queue = Object.keys(distances)
+				.filter((k) => entrances.some((e) => k.includes(e)))
+				.map((x) => {
+					let nodes = x.split('|').toReversed()
+					let hSeen = nodes.flatMap((n) => (obj[n]['value'] !== '.' ? [obj[n]['value']] : []))
+					return [[x, nodes.join('|')], nodes, hSeen, distances[x]]
+				})
+
+			const makeLastPath = ([seen, nodes, sHerbs, steps], pathLen) => {
+				let nextKeys = Object.keys(distances).filter((k) => {
+					let [s, e] = k.split('|')
+					let endVal = obj[e]['value']
+
+					return k.startsWith(nodes.at(-1)) && !seen.includes(k) && (endVal === '.' || !sHerbs.includes(endVal))
+				})
+
+				nextKeys
+					.filter((nk) =>
+						seen.length < pathLen
+							? nodes.every((no) => no !== nk.split('|')[1]) && !entrances.some((ek) => nk.endsWith(ek))
+							: entrances.some((ek) => nk.endsWith(ek))
+					)
+					.forEach((nk) => {
+						let [s, e] = nk.split('|')
+						let val = obj[e]['value']
+						let newDist = steps + distances[nk]
+
+						if (seen.length < pathLen) {
+							queue.push([seen.concat(nk), nodes.concat(s, e), sHerbs.concat(val !== '.' ? val : []), newDist])
+						} else {
+							let dKey = `${nodes[0]}|${e}`
+							if (!result?.[dKey] || newDist < result[dKey]) {
+								result[dKey] = newDist
+							}
+						}
+					})
+			}
 
 			while (queue.length) {
-				let [seen, seenVals, steps, curr] = queue.shift()
-				let [s, e] = curr.split('|')
-
-				let next = Object.entries(distances).filter(([dk, dv]) => {
-					let [dks, dke] = dk.split('|')
-					let dkeVal = obj[dke]['value']
-					return (
-						seen.every((s) => s !== dk && !s.includes(dke)) &&
-						!seenVals.includes(dkeVal) &&
-						dk.startsWith(e) &&
-						allToVisit.includes(dke)
-					)
-				})
-
-				if (next.length) {
-					next.forEach(([nk, nv]) => {
-						let [dks, dke] = nk.split('|')
-						let dkeVal = obj[dke]['value'] !== '.' ? obj[dke]['value'] : []
-						queue.push([seen.concat(nk), seenVals.concat(dkeVal), steps + nv, nk])
-					})
-				} else {
-					if (colInd === 1) {
-						console.log(
-							'end',
-							[seen, seenVals, steps, curr],
-							' valid exits',
-							toEntrances.filter(([ek, ev]) => ek.startsWith(e))
-						)
-					}
-					//console.log('end',[seen,steps,curr],toEntrances.filter(([ek,ev])=> ek.startsWith(e)))
-					toEntrances
-						.filter(([ek, ev]) => ek.startsWith(e))
-						.forEach(([ek, ev]) => {
-							let sKey = seen[0].split('|')[1]
-							let eKey = ek.split('|')[1]
-							let newKey = `${sKey}|${eKey}`
-							if (!lPaths?.[newKey] || lPaths[newKey] > steps + ev) {
-								lPaths[newKey] = steps + ev
-								if (colInd === 1) {
-									console.log(newKey, ' is now ', lPaths[newKey])
-								}
-							}
-						})
-				}
+				makeLastPath(queue.shift(), len)
 			}
-			return lPaths
+
+			return result
 		}
 
-		let lastPaths = lastSegment(rows.at(-1))
-		console.log(lastPaths)
-		let bTotal = parseInt(
-			rows
-				.slice(0, -1)
-				.map((x) => +!!x.herbTotal)
-				.join(''),
-			2
-		)
-		console.log(bTotal, bTotal.toString(2))
-		let finalResult = Infinity
-		let hE = Object.entries(r)
+		let last = lastPaths(lastRow)
+		let herbTotal = rows.map((o) => +!!o.herbs.length).join('')
+		let hLen = herbTotal.length
+		let minSteps = Infinity
 
-		while (hE.length) {
-			let [k, v] = hE.shift()
-			let [s, e, hTotal] = k.split('|')
-
-			hE.filter(([hk, hv]) => (parseInt(hTotal, 2) | parseInt(hk.split('|')[2], 2)) >= bTotal).forEach(([nk, nv]) => {
-				//console.log([k,v],[nk,nv])
-				let [ns, ne, nTotal] = nk.split('|')
-				let mEndPath = lastPaths[`${e}|${ne}`]
-				if (v + mEndPath + nv < finalResult) {
-					console.log('new min found', finalResult, v + mEndPath + nv, [k, v], [nk, nv])
-					finalResult = v + mEndPath + nv
-				}
-			})
+		//Find all pairs of paths that collect all herbs, and add matching end path/steps
+		while (subPaths.length > 1) {
+			let [currKey, currSteps] = subPaths.shift()
+			let [s, e, score] = currKey.split('|')
+			subPaths
+				.filter(([nk, nSteps]) => sumHerbs(score, nk.slice(-hLen)) === herbTotal)
+				.forEach(([nk, nSteps]) => {
+					let [ns, ne, nScore] = nk.split('|')
+					let endDist = last[`${e}|${ne}`]
+					let totalDist = currSteps + nSteps + endDist
+					if (totalDist < minSteps) {
+						minSteps = totalDist
+					}
+				})
 		}
 
-		total += finalResult
+		total += minSteps
 	})
-
 	return total
 }
 
-//console.log(solve(input2,2))
-console.log(solve(input3, 3))
+console.log('P1', solveP1())
+console.log('P2', solveP2P3(input2, 2))
+console.log('P2', solveP2P3(input3, 3))
