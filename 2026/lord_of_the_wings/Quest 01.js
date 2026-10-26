@@ -13,98 +13,39 @@ const input3 = fs.readFileSync('../../inputs/everybody_codes/2026/lord_of_the_wi
 	flag: 'r'
 })
 
-let lines = input1.split(/[\r\n]+/).map((x) => x.split(''))
+const solve = (input, partNo) => {
+	return input
+		.split(',')
+		.map(Number)
+		.map((x) => {
+			if (partNo === 1) {
+				return Math.ceil(Math.sqrt(x)) ** 2 - x
+			} else if (partNo === 2) {
+				let upper = Math.ceil((x + 2) / 4)
+				if (upper < 3) upper = 3
+				let border = upper * 2 + (upper - 2) * 2
 
-let rowLen = lines.length
-let colLen = lines[0].length
-let [sr, sc] = [0, lines[0].indexOf('S')]
-let startPos = `${sr}_${sc}`
+				if (border < x) {
+					upper++
+					border = upper * 2 + (upper - 2) * 2
+				}
+				return border - x
+			} else if (partNo === 3) {
+				let square = Math.ceil(Math.sqrt(x))
 
-let grid = {}
+				if (square % 2 === 0) square++
+				let f = square ** 2 - 1
+				if (f < x) {
+					square % 2 ? (square += 2) : square++
+					f = square ** 2 - 1
+				}
 
-const neighbours = (r, c) => {
-	let result = {}
-
-	let next = [
-		[r + 1, c],
-		[r - 1, c],
-		[r, c + 1],
-		[r, c - 1]
-	]
-	next
-		.filter(([nr, nc]) => lines?.[nr]?.[nc] && lines[nr][nc] !== '#')
-		.forEach(([nr, nc]) => {
-			let v = lines[nr][nc]
-			let key = [nr, nc].join('_')
-
-			if (v === '+') {
-				result[1] = result[1]?.concat(key) || [key]
-			} else if (v === '-') {
-				result[-2] = result[-2]?.concat(key) || [key]
-			} else {
-				result[-1] = result[-1]?.concat(key) || [key]
+				return f - x
 			}
 		})
-
-	return result
+		.reduce((a, c) => a + c, 0)
 }
 
-lines.forEach((row, rowInd) => {
-	row.forEach((val, colInd) => {
-		if (val !== '#') {
-			let key = `${rowInd}_${colInd}`
-			grid[key] = neighbours(rowInd, colInd)
-		}
-	})
-})
-
-let loopCorners = Object.keys(grid).filter((x) => {
-	let [r, c] = x.split('_').map(Number)
-
-	if (lines[r][c] === '+' && grid[x][1]?.length === 2) {
-		let n = grid[x][1]
-		return (
-			n.some((k) => k.startsWith(`${r - 1}_`) || k.startsWith(`${r + 1}_`)) &&
-			n.some((k) => k.endsWith(`_${c - 1}`) || k.endsWith(`_${c + 1}`))
-		)
-	} else {
-		return false
-	}
-})
-
-const bfs = (start, end) => {
-	let queue = { ...start }
-	let seen = new Set(Object.keys(queue))
-	let t = 0
-	let result = {}
-
-	while (end.some((ek) => !seen.has(ek))) {
-		let newQueue = {}
-		Object.entries(queue).forEach(([k, v]) => {
-			;[1, -1, -2].forEach((alt) => {
-				grid[k][alt].forEach((nk) => {
-					if (end.includes(nk)) {
-						if (result[nk] === undefined || result[nk] < v + alt) {
-							result[nk] = {}
-						}
-					} else if (newQueue[nk] === undefined || newQueue[nk] < v + alt) {
-						newQueue[nk] = v + alt
-					}
-				})
-			})
-		})
-		t++
-	}
-}
-
-// let loop = [loopCorner].concat(grid[loopCorner][1])
-
-// let oppCorner = Object.keys(grid).find((x) => {
-// 	let adj = grid?.[x]?.[1]
-// 	return adj ? grid[loopCorner][1].every((v) => adj.includes(v)) : false
-// })
-
-// console.log(loop, oppCorner)
-
-//
-// queue {startKey:startAltitude}
+console.log(solve(input1, 1))
+console.log(solve(input2, 2))
+console.log(solve(input3, 3))
