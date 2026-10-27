@@ -14,34 +14,19 @@ const input3 = fs.readFileSync('../../inputs/everybody_codes/2026/lord_of_the_wi
 })
 
 const solve = (input, partNo) => {
-	return input
-		.split(',')
-		.map(Number)
+	let nums = input.split(',').map(Number)
+
+	if (partNo === 1) return nums.map((x) => Math.ceil(Math.sqrt(x)) ** 2 - x).reduce((a, c) => a + c, 0)
+
+	if (partNo === 2) return nums.map((x) => (x <= 8 ? 8 - x : Math.ceil(x / 4) * 4 - x)).reduce((a, c) => a + c, 0)
+
+	return nums
 		.map((x) => {
-			if (partNo === 1) {
-				return Math.ceil(Math.sqrt(x)) ** 2 - x
-			} else if (partNo === 2) {
-				let upper = Math.ceil((x + 2) / 4)
-				if (upper < 3) upper = 3
-				let border = upper * 2 + (upper - 2) * 2
+			let square = Math.ceil(Math.sqrt(x))
+			if (square % 2 === 0) square++
+			let f = square ** 2 - 1
 
-				if (border < x) {
-					upper++
-					border = upper * 2 + (upper - 2) * 2
-				}
-				return border - x
-			} else if (partNo === 3) {
-				let square = Math.ceil(Math.sqrt(x))
-
-				if (square % 2 === 0) square++
-				let f = square ** 2 - 1
-				if (f < x) {
-					square % 2 ? (square += 2) : square++
-					f = square ** 2 - 1
-				}
-
-				return f - x
-			}
+			return f >= x ? f - x : (square + 2) ** 2 - 1 - x
 		})
 		.reduce((a, c) => a + c, 0)
 }
