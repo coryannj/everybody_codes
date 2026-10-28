@@ -35,18 +35,14 @@ const solve = (input) => {
 			let v = order[k]
 			let missingKeys = [...elements].filter((x) => x !== k && v[x] === undefined)
 
-			Object.entries(v).forEach(([nk, op]) => {
-				Object.entries(order[nk])
-					.filter(([nk2, op2]) => missingKeys.includes(nk2))
-					.forEach(([nk2, op2]) => {
-						if (op === '>' && op2 === '>') {
-							order[k][nk2] = '>'
-							order[nk2][k] = '<'
-						} else if (op === '<' && op2 === '<') {
-							order[k][nk2] = '<'
-							order[nk2][k] = '>'
-						}
-					})
+			missingKeys.forEach((mk) => {
+				let [nk, op] = Object.entries(v).find(([nk2, op2]) =>
+					Object.entries(order[nk2]).some(([nk3, op3]) => mk === nk3 && op2 === op3)
+				)
+
+				let opp = op === '<' ? '>' : '<'
+				order[k][mk] = op
+				order[mk][k] = opp
 			})
 		})
 
