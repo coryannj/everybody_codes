@@ -145,9 +145,7 @@ const solve = (input, partNo) => {
 
 	let step1 = new Set(land.values().filter((k) => stepTree(k)))
 
-	let step2 = step1
-		.values()
-		.reduce((a, c) => a.union(new Set(grid[c]['neighbours'].values().filter((v) => stepTree(v, step1)))), new Set())
+	let step2 = new Set(step1.values().flatMap((k) => grid[k]['neighbours'].values().filter((nk) => stepTree(nk, step1))))
 
 	return trees.size + step1.size + step2.size
 }
