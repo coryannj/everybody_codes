@@ -41,7 +41,7 @@ const makeGrid = (input) => {
 	lines.forEach((row, rowInd) => {
 		row.forEach((val, colInd) => {
 			let key = `${rowInd}_${colInd}`
-			grid[key] = { value: val, neighbours: neighbours(rowInd, colInd) }
+			grid[key] = { value: val, neighbours: new Set(neighbours(rowInd, colInd)) }
 		})
 	})
 
@@ -52,11 +52,13 @@ const solve = (input, partNo) => {
 	let [startKey, rowLen, colLen, grid] = makeGrid(input)
 
 	const isLand = (k) => {
-		if (grid[k]['value'] === '#') return false
-
-		let neighbours = grid[k]['neighbours'].map((v) => grid[v]['value'])
-
-		return neighbours.includes('#') && neighbours.filter((v) => v !== '0').length >= 5
+		return (
+			grid[k]['value'] !== '#' &&
+			grid[k]['neighbours']
+				.values()
+				.filter((v) => grid[v]['value'] !== '0')
+				.toArray().length >= 5
+		)
 	}
 
 	const isSand = (k) => {
@@ -64,9 +66,13 @@ const solve = (input, partNo) => {
 		if (k.startsWith('0_') || k.startsWith(`${rowLen - 1}_`) || k.endsWith('_0') || k.endsWith(`_${colLen - 1}`))
 			return true
 
-		let neighbours = grid[k]['neighbours'].map((v) => grid[v]['value'])
+		let neighbours = grid[k]['neighbours'].values().reduce((a, c) => {
+			let val = grid[c]['value']
+			a[val] = (a[val] || 0) + 1
+			return a
+		}, {})
 
-		return neighbours.some((v) => '01'.includes(v)) || neighbours.filter((v) => v === '=').length >= 5
+		return neighbours['0'] || neighbours['1'] || neighbours['='] >= 5
 	}
 
 	const isTree = (k) => {
@@ -86,47 +92,64 @@ const solve = (input, partNo) => {
 		return true
 	}
 
-	const stepTree = (k) => {
+	const stepTree = (k, acc) => {
 		if (grid[k]['value'] !== '#') return false
-		let neighbours = grid[k]['neighbours'].map((v) => grid[v]['value'])
-		return !neighbours.includes('=') && neighbours.filter((v) => v === '@').length >= 4
+
+		let neighbours = grid[k]['neighbours'].values().reduce((a, c) => {
+			if (acc && acc.has(c)) {
+				a['@'] = (a['@'] || 0) + 1
+			} else {
+				let val = grid[c]['value']
+				a[val] = (a[val] || 0) + 1
+			}
+
+			return a
+		}, {})
+
+		return neighbours['='] === undefined && neighbours[`@`] >= 4
 	}
 
-	const mapGrid = (candidates, newVal, loops, callback) => {
-		let queue = candidates.filter(callback)
-		let seen = [...queue]
+	const mapGrid = (candidates, newVal, callback) => {
+		let result = new Set()
 
-		while (loops) {
-			loops--
-			queue.forEach((k) => (grid[k]['value'] = newVal))
-			queue = candidates.filter(callback)
-			if (!queue.length) break
-			if (loops) seen = seen.concat(queue)
+		while (true) {
+			candidates = candidates
+				.values()
+				.filter(callback)
+				.reduce((newQueue, k) => {
+					grid[k]['value'] = newVal
+					result.add(k)
+					return newQueue.union(grid[k]['neighbours'])
+				}, new Set())
+
+			if (!candidates.size) break
 		}
 
-		return seen
+		return result
 	}
 
-	let land = mapGrid(Object.keys(grid), '#', Infinity, isLand).concat(startKey)
+	let land = mapGrid(grid[startKey]['neighbours'], '#', isLand)
+	land.add(startKey)
 
-	if (partNo === 1) return land.length
+	if (partNo === 1) return land.size
 
-	let sand = mapGrid(land, '=', Infinity, isSand)
+	let sand = mapGrid(land, '=', isSand)
 
-	if (partNo === 2) return sand.length
+	if (partNo === 2) return sand.size
 
-	land = land.filter((v) => !sand.includes(v))
+	land = land.difference(sand)
 
-	let trees = mapGrid(land, '@', Infinity, isTree)
+	let trees = mapGrid(land, '@', isTree)
 
-	let steps = mapGrid(
-		land.filter((k) => !trees.includes(k)),
-		'@',
-		2,
-		stepTree
-	)
+	land = land.difference(trees)
 
-	return trees.length + steps.length
+	let step1 = new Set(land.values().filter((k) => stepTree(k)))
+
+	let step2 = step1
+		.values()
+		.reduce((a, c) => a.union(new Set(grid[c]['neighbours'].values().filter((v) => stepTree(v, step1)))), new Set())
+
+	return trees.size + step1.size + step2.size
 }
 
 console.log(solve(input1, 1))
