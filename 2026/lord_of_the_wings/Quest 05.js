@@ -113,14 +113,17 @@ const solve = (input, partNo) => {
 		let result = new Set()
 
 		while (true) {
-			candidates = candidates
-				.values()
-				.filter(callback)
-				.reduce((newQueue, k) => {
-					grid[k]['value'] = newVal
-					result.add(k)
-					return newQueue.union(grid[k]['neighbours'])
-				}, new Set())
+			candidates = new Set(
+				candidates.values().flatMap((k) => {
+					if (callback(k)) {
+						grid[k]['value'] = newVal
+						result.add(k)
+						return grid[k]['neighbours']
+					} else {
+						return []
+					}
+				})
+			)
 
 			if (!candidates.size) break
 		}
