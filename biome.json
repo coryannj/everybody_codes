@@ -3,11 +3,11 @@
 		"formatter": {
 			"indentStyle": "tab",
 			"indentWidth": 2,
-			"lineWidth": 120,
+			"lineWidth": 250,
 			"expand": "never",
 			"arrowParentheses": "always",
 			"bracketSameLine": false,
-			"bracketSpacing": true,
+			"bracketSpacing": false,
 			"delimiterSpacing": false,
 			"quoteStyle": "single",
 			"jsxQuoteStyle": "double",
