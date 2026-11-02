@@ -91,20 +91,20 @@ const solve = (input, partNo) => {
 			.filter((k) => isTree(k))
 	)
 
-	const stepTree = (k) => neighbours[k].values().reduce((a, c) => (trees.has(c) ? a + 1 : a), 0) >= 4
-
-	for (s = 0; s < 2; s++) {
-		trees = trees.union(
-			new Set(
-				trees
-					.values()
-					.flatMap((k) => neighbours[k])
-					.filter((k) => !trees.has(k) && stepTree(k))
-			)
+	const stepTree = (k) => !trees.has(k) && neighbours[k].values().reduce((a, c) => (trees.has(c) ? a + 1 : a), 0) >= 4
+	const takeStep = (set) =>
+		new Set(
+			set
+				.values()
+				.flatMap((k) => neighbours[k])
+				.filter((k) => stepTree(k))
 		)
-	}
 
-	return trees.size
+	let step1 = takeStep(trees)
+
+	trees = trees.union(step1)
+
+	return trees.size + takeStep(step1).size
 }
 
 console.log(solve(input1, 1))
