@@ -7,33 +7,22 @@ const filePath = `../../inputs/everybody_codes/${year}/${eventName}/quest${quest
 const [input1, input2, input3] = [1, 2, 3].map((partNo) => fs.readFileSync(`${filePath}${partNo}.txt`, {encoding: 'utf8', flag: 'a+'}))
 
 const solve = (input, partNo) => {
-	lines = input.split(/[\r\n]+/).map((x) => x.split(/[:,]/g))
+	let lines = input.split(/[\r\n]+/).map((x) => x.split(/[:,]/g)),
+		ingredients =
+			partNo === 1
+				? Object.fromEntries(lines.map((x) => [x[0], new Set(x.slice(1))]))
+				: lines.reduce((a, [item, ...ings]) => {
+						ings.forEach((ing) => {
+							a[ing] ? a[ing].add(item) : (a[ing] = new Set([item]))
+						})
+						return a
+					}, {})
 
-	ingredients = Object.fromEntries(new Set(lines.flat()).values().map((v) => (v = [v, {uses: new Set(), usedBy: new Set()}])))
+	const made = (i) => {
+		let result = ingredients[i]
 
-	lines.forEach(([item, ...ings]) => {
-		ings.forEach((ing) => {
-			ingredients[item]['uses'].add(ing)
-
-			if (partNo > 1) {
-				ingredients[ing]['usedBy'].add(item)
-			}
-		})
-	})
-
-	const made = (ing, direction) => {
-		let queue = ingredients[ing][direction]
-		let result = new Set()
-
-		while (queue.size) {
-			queue = new Set(
-				queue.values().flatMap((v) => {
-					if (!v.startsWith('NULL')) {
-						result.add(v)
-					}
-					return ingredients[v][direction]
-				})
-			).difference(result)
+		for (const v of result.values()) {
+			ingredients[v]?.values()?.forEach((nv) => result.add(nv))
 		}
 
 		return result
