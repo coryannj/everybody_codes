@@ -4,98 +4,139 @@ const input1 = fs.readFileSync('../inputs/everybody_codes/2024/quest20_1.txt', {
 const input2 = fs.readFileSync('../inputs/everybody_codes/2024/quest20_2.txt', { encoding: 'utf8', flag: 'r' })
 const input3 = fs.readFileSync('../inputs/everybody_codes/2024/quest20_3.txt', { encoding: 'utf8', flag: 'r' })
 
-let lines = input1.split(/[\r\n]+/).map((x) => x.split(''))
 
-let rowLen = lines.length
-let colLen = lines[0].length
-let [sr, sc] = [0, lines[0].indexOf('S')]
-let startPos = `${sr}_${sc}`
 
-let grid = {}
+const makeGrid = (input) => {
+	let lines = input.split(/[\r\n]+/).map((x) => x.split('')), colLen = lines[0].length, padding = '#'.repeat(colLen).split('')
 
-const neighbours = (r, c) => {
-	let result = {}
+	lines.unshift(padding)
+	lines.push(padding)
 
-	let next = [
-		[r + 1, c],
-		[r - 1, c],
-		[r, c + 1],
-		[r, c - 1]
-	]
-	next
-		.filter(([nr, nc]) => lines?.[nr]?.[nc] && lines[nr][nc] !== '#')
-		.forEach(([nr, nc]) => {
-			let v = lines[nr][nc]
-			let key = [nr, nc].join('_')
+	let [sr, sc] = [1, lines[1].indexOf('S')]
+	let startKey = `${sr}_${sc}`
+	let grid = {}
 
-			if (v === '+') {
-				result[1] = result[1]?.concat(key) || [key]
-			} else if (v === '-') {
-				result[-2] = result[-2]?.concat(key) || [key]
-			} else {
-				result[-1] = result[-1]?.concat(key) || [key]
+	const neighbours = (r, c) => {
+		let next = [
+			[r + 1, c, 'D'],
+			[r - 1, c, 'U'],
+			[r, c + 1, 'R'],
+			[r, c - 1, 'L']
+		]
+
+		return next.flatMap(([nr, nc, d]) => lines?.[nr]?.[nc] && lines[nr][nc] !== '#' ? [[`${nr}_${nc}_${d}`, d, lines[nr][nc]]] : [])
+	}
+
+	lines.forEach((row, rowInd) => {
+		row.forEach((val, colInd) => {
+			if (val !== '#') {
+				let prefix = `${rowInd}_${colInd}`, n = neighbours(rowInd, colInd), opp = [['U', 'D'], ['D', 'U'], ['L', 'R'], ['R', 'L']]
+
+				opp.forEach(([k, oppK]) => {
+					let obj = { value: val, prev: '' }
+					let result = new Map()
+
+					n.forEach(([nk, nd, nv]) => {
+						if (nd === oppK) {
+							obj['prev'] = nk
+						} else {
+							if (nv === '+') {
+								result.set(1, result?.get(1)?.concat(nk) || [nk])
+							} else if (nv === '-') {
+								result.set(-2, result?.get(-2)?.concat(nk) || [nk])
+							} else {
+								result.set(-1, result?.get(-1)?.concat(nk) || [nk])
+							}
+						}
+					})
+					obj['neighbours'] = result
+					grid[`${prefix}_${k}`] = obj
+				})
 			}
 		})
-
-	return result
-}
-
-lines.forEach((row, rowInd) => {
-	row.forEach((val, colInd) => {
-		if (val !== '#') {
-			let key = `${rowInd}_${colInd}`
-			grid[key] = neighbours(rowInd, colInd)
-		}
 	})
-})
 
-let loopCorners = Object.keys(grid).filter((x) => {
-	let [r, c] = x.split('_').map(Number)
-
-	if (lines[r][c] === '+' && grid[x][1]?.length === 2) {
-		let n = grid[x][1]
-		return (
-			n.some((k) => k.startsWith(`${r - 1}_`) || k.startsWith(`${r + 1}_`)) &&
-			n.some((k) => k.endsWith(`_${c - 1}`) || k.endsWith(`_${c + 1}`))
-		)
-	} else {
-		return false
-	}
-})
-
-const bfs = (start, end) => {
-	let queue = { ...start }
-	let seen = new Set(Object.keys(queue))
-	let t = 0
-	let result = {}
-
-	while (end.some((ek) => !seen.has(ek))) {
-		let newQueue = {}
-		Object.entries(queue).forEach(([k, v]) => {
-			;[1, -1, -2].forEach((alt) => {
-				grid[k][alt].forEach((nk) => {
-					if (end.includes(nk)) {
-						if (result[nk] === undefined || result[nk] < v + alt) {
-							result[nk] = {}
-						}
-					} else if (newQueue[nk] === undefined || newQueue[nk] < v + alt) {
-						newQueue[nk] = v + alt
-					}
-				})
-			})
-		})
-		t++
-	}
+	return [startKey, grid]
 }
 
-// let loop = [loopCorner].concat(grid[loopCorner][1])
+const solve = (input, partNo) => {
+	let [startKey, grid] = makeGrid(input)
 
-// let oppCorner = Object.keys(grid).find((x) => {
-// 	let adj = grid?.[x]?.[1]
-// 	return adj ? grid[loopCorner][1].every((v) => adj.includes(v)) : false
-// })
+	let state = partNo === 1 ? '' : '|_'
 
-// console.log(loop, oppCorner)
+	let startAltitude = partNo === 1 ? 1000 : 10000
 
-//
-// queue {startKey:startAltitude}
+	let seen = Object.fromEntries(grid[`${startKey}_D`]['neighbours'].entries().flatMap(([alt, keys]) => keys.flatMap((k) => [[k + state, startAltitude + alt]])))
+
+	let queue = new Map(Object.entries(seen))
+
+	if (partNo === 1) {
+		for (i = 1; i < 100; i++) {
+			queue = queue.entries().reduce((newQueue, [k1, a1]) => {
+				grid[k1]['neighbours'].entries().forEach(([a2, keys]) => {
+					keys.forEach((k2) => {
+						if (!seen[k2] || seen[k2] < a1 + a2) {
+							seen[k2] = a1 + a2
+							newQueue.set(k2, a1 + a2)
+						}
+					})
+				})
+
+				return newQueue
+			}, new Map())
+		}
+
+		return Math.max(...Object.values(seen))
+	}
+
+	let checkpoints = { A: '_', B: '_A', C: '_AB', S: '_ABC' }
+	let time = 1
+
+	while (true) {
+		time++
+		let newQueue = new Map()
+
+		for (const [s, a1] of queue.entries()) {
+			let [k1, state] = s.split('|')
+
+			for (const [a2, keys] of grid[k1]['neighbours'].entries()) {
+				for (const k2 of keys) {
+					let val = grid[k2]['value']
+					if (checkpoints[val]) {
+						let prevState = checkpoints[val]
+						if (state === prevState) {
+							let newState = `${prevState}${val}`
+							let newKey = `${k2}|${newState}`
+							if (!seen[newKey] || seen[newKey] < a1 + a2) {
+								if (val === 'S' && a1 + a2 >= 10000) return time
+
+								seen[newKey] = a1 + a2
+								newQueue.set(newKey, a1 + a2)
+							}
+						}
+					} else {
+						let newKey = `${k2}|${state}`
+						if (!seen[newKey] || seen[newKey] < a1 + a2) {
+							seen[newKey] = a1 + a2
+							newQueue.set(newKey, a1 + a2)
+						}
+					}
+				}
+			}
+		}
+
+		queue = newQueue
+	}
+}
+console.log(solve(input1, 1))
+console.log(solve(input2, 2))
+
+let p3 = 384400
+let tile1Offset = 9
+let tile = 6
+let tileLen = 12
+
+let tiles = Math.floor((p3 - tile1Offset) / tile)
+let totalAltitude = tiles * tile + tile1Offset + 1
+let distance = (tiles + 1) * tileLen + (p3 - totalAltitude)
+console.log(distance)
