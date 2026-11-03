@@ -31,7 +31,7 @@ const solve = (input, partNo) => {
 					if (!v.startsWith('NULL')) {
 						result.add(v)
 					}
-					return ingredients[v][direction] || []
+					return ingredients[v][direction]
 				})
 			).difference(result)
 		}
