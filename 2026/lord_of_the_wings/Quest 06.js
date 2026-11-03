@@ -28,13 +28,12 @@ const solve = (input, partNo) => {
 		return result
 	}
 
-	if (partNo === 1) return made('NULL', 'uses').size
-	if (partNo === 2) return made('NULL', 'usedBy').size
-
-	return Object.keys(ingredients)
-		.flatMap((k) => (k.startsWith('NULL') ? [made(k, 'usedBy')] : []))
-		.flatMap((v, i, a) => a.slice(i + 1).map((z) => v.intersection(z)))
-		.reduce((a, c) => a.union(c)).size
+	return partNo < 3
+		? made('NULL').size
+		: ['NULLv1', 'NULLv2', 'NULLv3']
+				.map((v) => made(v))
+				.flatMap((v, i, a) => a.slice(i + 1).flatMap((z) => v.intersection(z)))
+				.reduce((a, c) => a.union(c)).size
 }
 
 console.log(solve(input1, 1))
