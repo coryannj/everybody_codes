@@ -45,7 +45,6 @@ const solve = (input, partNo) => {
 	return Object.keys(ingredients)
 		.flatMap((k) => (k.startsWith('NULL') ? [made(k, 'usedBy')] : []))
 		.flatMap((v, i, a) => a.slice(i + 1).map((z) => v.intersection(z)))
-		.values()
 		.reduce((a, c) => a.union(c)).size
 }
 
