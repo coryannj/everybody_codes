@@ -1,62 +1,84 @@
 const fs = require('fs')
-const year = '2026'
-const eventName = 'lord_of_the_wings'
-const quest = 7
-const filePath = `../../inputs/everybody_codes/${year}/${eventName}/quest${quest}_`
+const [eventName, year, quest] = ['lord_of_the_wings', 2026, 7]
+const filePath = `../../inputs/everybody_codes/${year}/${eventName}/quest${quest}`
+const [input1, input2, input3] = [1, 2, 3].map((partNo) => fs.readFileSync(`${filePath}_${partNo}.txt`, { encoding: 'utf8', flag: 'a+' }))
 
-const [input1, input2, input3] = [1, 2, 3].map((partNo) => fs.readFileSync(`${filePath}${partNo}.txt`, { encoding: 'utf8', flag: 'a+' }))
+const parseInput = (input, partNo) => {
+    let lines = input.split(/[\r\n]+/).map((x) => x.match(/\d+/g).map(Number))
+    let clouds = Object.fromEntries(lines.map(([id, e, ...c]) => [id, { energy: e, connections: c }]))
 
-const solve = (input, partNo) => {
-    lines = input.split(/[\r\n]+/).map((x) => x.split(/,\s/g).map((y) => y.split('=')))
-    let clouds = {}, maxC = -Infinity, maxId
+    return [clouds, lines.at(-1)[0], partNo < 3 ? Object.entries(clouds).reduce(([mid, mLen], [id, v]) => v.connections.length > mLen ? [id, v.connections.length] : [mid, mLen], [0, -Infinity])[0] : null]
+}
 
-    lines.forEach(([[a, id], [b, energy], [c, connections]]) => {
-        clouds[id] = { energy: +energy, connections: connections.split(',') }
-        if (partNo < 3 && connections.length > maxC) {
-            maxId = id
-            maxC = connections.length
-        }
-    })
+const solvep1p2 = (input, partNo) => {
+    let
+        [clouds, highestId, maxId] = parseInput(input, partNo),
+        start = partNo === 1 ? 5 : 10,
+        baseQueue = Array(highestId + 1).fill(0).map((x) => x),
+        queue = baseQueue.with(maxId, 1)
+
+    for (impulse = start; impulse > 0; impulse--) {
+        queue = queue.reduce((newQueue, count, id) => {
+            if (count) {
+                clouds[id]['energy'] += (count * impulse)
+                if (impulse > 1) clouds[id]['connections'].forEach((c) => newQueue[c] += count)
+            }
+            return newQueue
+        }, baseQueue.slice(0))
+    }
+
+    return Object.values(clouds).reduce((a, c) => a + c.energy, 0)
+}
+
+const solvep3 = (input, partNo) => {
+    let
+        [clouds, highestId, maxId] = parseInput(input, partNo),
+        start = 10,
+        baseQueue = Array(11).fill().map((x) => null),
+        baseSubQueue = Array(highestId + 1).fill(0).map((x) => x)
 
     const propagate = (firstId, firstImpulse, clouds, explosion) => {
-        let queue = new Map([[firstImpulse, new Map([[firstId, 1]])]])
+        let queue = baseQueue.slice()
+        queue[firstImpulse] = baseSubQueue.with(firstId, 1)
 
-        while (queue.size) {
-            queue = queue.entries().reduce((newQueue, [impulse, subQueue]) => {
-                subQueue.entries().filter(([id, count]) => clouds[id]).forEach(([id, count]) => {
-                    clouds[id]['energy'] += (count * impulse)
+        while (queue.some((x) => x)) {
+            let newQueue = baseQueue.slice(0)
 
-                    if (impulse > 1) {
-                        if (!newQueue.has(impulse - 1)) newQueue.set(impulse - 1, new Map())
-
-                        clouds[id]['connections'].filter((c) => clouds[c]).forEach((c) => {
-                            newQueue.get(impulse - 1).set(c, (newQueue.get(impulse - 1)?.get(c) || 0) + count)
-                        })
-                    }
-                })
-                return newQueue
-            }, new Map())
-
-            if (explosion) {
-                Object.keys(clouds).filter((k) => clouds[k]['energy'] >= explosion).forEach((k) => {
-                    clouds[k]['connections'].filter((c) => clouds[c]).forEach((c) => {
-                        if (!queue.has(firstImpulse)) queue.set(firstImpulse, new Map())
-                        queue.get(firstImpulse).set(c, (queue.get(firstImpulse)?.get(c) || 0) + 1)
+            queue.forEach((subQueue, impulse) => {
+                if (subQueue) {
+                    subQueue.forEach((count, id) => {
+                        if (count && clouds[id]) {
+                            clouds[id]['energy'] += (count * impulse)
+                            if (impulse > 1) {
+                                if (!newQueue[impulse - 1]) newQueue[impulse - 1] = baseSubQueue.slice(0)
+                                clouds[id]['connections'].forEach((c) => {
+                                    if (clouds[c]) newQueue[impulse - 1][c] += count
+                                })
+                            }
+                        }
                     })
+                }
+            })
 
-                    delete clouds[k]
+            queue = newQueue
+
+            Object.keys(clouds).filter((k) => clouds[k]['energy'] >= explosion).forEach((k) => {
+                if (!queue[firstImpulse]) queue[firstImpulse] = baseSubQueue.slice(0)
+
+                clouds[k]['connections'].forEach((c) => {
+                    if (clouds[c]) queue[firstImpulse][c]++
                 })
-            }
+
+                delete clouds[k]
+            })
         }
 
         return Object.values(clouds).reduce((a, c) => a + c.energy, 0)
     }
 
-    let start = partNo === 1 ? 5 : 10
-
-    return partNo < 3 ? propagate(maxId, start, clouds) : Math.max(...Object.keys(clouds).map((k) => propagate(k, start, structuredClone(clouds), 1000000)))
+    return Math.max(...Object.keys(clouds).map((id) => propagate(+id, start, structuredClone(clouds), 1000000)))
 }
 
-console.log(solve(input1, 1))
-console.log(solve(input2, 2))
-console.log(solve(input3, 3))
+console.log(solvep1p2(input1, 1))
+console.log(solvep1p2(input2, 2))
+console.log(solvep3(input3, 3))
