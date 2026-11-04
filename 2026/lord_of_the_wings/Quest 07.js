@@ -11,15 +11,15 @@ const solve = (input, partNo) => {
     let clouds = {}, maxC = -Infinity, maxId
 
     lines.forEach(([[a, id], [b, energy], [c, connections]]) => {
-        clouds[id] = { energy: +energy, connections: connections.split(',').map(Number) }
+        clouds[id] = { energy: +energy, connections: connections.split(',') }
         if (partNo < 3 && connections.length > maxC) {
             maxId = id
             maxC = connections.length
         }
     })
 
-    const propagate = (id, firstImpulse, clouds, explosion) => {
-        let queue = new Map([[firstImpulse, new Map([[id, 1]])]])
+    const propagate = (firstId, firstImpulse, clouds, explosion) => {
+        let queue = new Map([[firstImpulse, new Map([[firstId, 1]])]])
 
         while (queue.size) {
             queue = queue.entries().reduce((newQueue, [impulse, subQueue]) => {
