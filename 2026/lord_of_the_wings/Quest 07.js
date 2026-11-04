@@ -61,10 +61,3 @@ const solve = (input, partNo) => {
 console.log(solve(input1, 1))
 console.log(solve(input2, 2))
 console.log(solve(input3, 3))
-
-let t1 = performance.now()
-solve(input1, 1)
-solve(input2, 2)
-solve(input3, 3)
-let t2 = performance.now()
-console.log(t2 - t1)
