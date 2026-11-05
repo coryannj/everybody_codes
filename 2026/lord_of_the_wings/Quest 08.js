@@ -28,15 +28,15 @@ const solve = (input, partNo) => {
         return result
     }
 
-    const dirs = partNo < 2 ? ['DR'] : ['DR', 'DL', 'L', 'UL', 'UR', 'R']
+    const dirs = partNo === 1 ? ['DR'] : ['DR', 'DL', 'L', 'UL', 'UR', 'R']
 
-    const getQueue = Object.fromEntries(dirs.map((d) => {
-        if (d === 'L' || d === 'R') return [d, Array(rowLen).fill().map((x, i) => Object.keys(grid).filter((k) => k.startsWith(`${i}_`))).map((x) => d === 'R' ? x : x.reverse())]
+    const queues = dirs.map((d) => {
+        if (d === 'L' || d === 'R') return Array(rowLen).fill().map((x, i) => Object.keys(grid).filter((k) => k.startsWith(`${i}_`))).map((x) => d === 'R' ? x : x.reverse())
 
         let opp = { 'DR': 'UL', 'DL': 'UR', 'UL': 'DR', 'UR': 'DL' }
 
-        return [d, Object.keys(grid).filter((k) => !grid[k]['neighbours'][opp[d]]).map((k) => getDiagonal(k, d))]
-    }))
+        return Object.keys(grid).filter((k) => !grid[k]['neighbours'][opp[d]]).map((k) => getDiagonal(k, d))
+    })
 
     let energy = 0
     let warriors = 0
@@ -49,40 +49,30 @@ const solve = (input, partNo) => {
                 max--
                 let v = grid[k]['value']
 
-                if (partNo < 3) {
+                if (1 <= v && v <= 9) {
                     if (v > max) {
                         energy++
                         max = v
-                    }
-                } else {
-                    if (1 <= v && v <= 9) {
-                        if (v > max) {
-                            energy++
-                            max = v
+                        if (partNo === 3) {
                             grid[k]['value']++
                             if (v === 9) warriors++
                         }
-                    } else {
-                        grid[k]['value'] = (v + 1) % 12
                     }
+                } else if (partNo === 3) {
+                    grid[k]['value'] = (v + 1) % 12
                 }
             })
         })
     }
 
-    if (partNo === 1) {
-        hasEnergy(getQueue['DR'], partNo)
+    if (partNo < 3) {
+        queues.forEach((q) => hasEnergy(q, partNo))
     } else {
-        let queues = dirs.map((d) => getQueue[d])
-        if (partNo === 2) {
-            queues.forEach((q) => hasEnergy(q, partNo))
-        } else {
-            outer: {
-                while (true) {
-                    for (const q of queues) {
-                        hasEnergy(q, partNo)
-                        if (warriors >= 100000) break outer;
-                    }
+        outer: {
+            while (true) {
+                for (const q of queues) {
+                    hasEnergy(q, partNo)
+                    if (warriors >= 100000) break outer;
                 }
             }
         }
@@ -94,3 +84,10 @@ const solve = (input, partNo) => {
 console.log(solve(input1, 1))
 console.log(solve(input2, 2))
 console.log(solve(input3, 3))
+
+let t1 = performance.now()
+solve(input1, 1)
+solve(input2, 2)
+solve(input3, 3)
+let t2 = performance.now()
+console.log(t2 - t1)
