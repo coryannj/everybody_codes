@@ -48,6 +48,7 @@ const solve = (input, partNo) => {
             q.forEach((k) => {
                 max--
                 let v = grid[k]['value']
+
                 if (partNo < 3) {
                     if (v > max) {
                         energy++
@@ -65,27 +66,29 @@ const solve = (input, partNo) => {
                         grid[k]['value'] = (v + 1) % 12
                     }
                 }
-
             })
         })
-
-        return [energy, warriors]
     }
 
-
-    if (partNo === 1) return hasEnergy(getQueue['DR'], partNo)[0]
-    if (partNo === 2) return dirs.map((d) => hasEnergy(getQueue[d], partNo)[0]).at(-1)
-
-    function* loopQueue() {
+    if (partNo === 1) {
+        hasEnergy(getQueue['DR'], partNo)
+    } else {
         let queues = dirs.map((d) => getQueue[d])
-        while (true) {
-            for (const q of queues) {
-                yield hasEnergy(q, partNo)
+        if (partNo === 2) {
+            queues.forEach((q) => hasEnergy(q, partNo))
+        } else {
+            outer: {
+                while (true) {
+                    for (const q of queues) {
+                        hasEnergy(q, partNo)
+                        if (warriors >= 100000) break outer;
+                    }
+                }
             }
         }
     }
 
-    return loopQueue().find(([e, w]) => w >= 100000)[0]
+    return energy
 }
 
 console.log(solve(input1, 1))
