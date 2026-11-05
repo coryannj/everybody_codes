@@ -58,7 +58,7 @@ const solve = (input, partNo) => {
                             if (v === 9) warriors++
                         }
                     }
-                } else if (partNo === 3) {
+                } else {
                     grid[k]['value'] = (v + 1) % 12
                 }
             })
