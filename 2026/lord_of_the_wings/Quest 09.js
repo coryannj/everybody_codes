@@ -44,8 +44,7 @@ const grow = ([growth, limit]) => {
 
     let
         half = (growth - 1n) / 2n,
-        plant = half === 1n ? [[half, BigInt(3)]] : [[half, BigInt(2)], [BigInt(1), BigInt(1)]],
-        split = structuredClone(plant)
+        plant = [[half, 2n], [1n, 1n]]
 
     function* growStep() {
         while (true) {
@@ -54,33 +53,26 @@ const grow = ([growth, limit]) => {
             splits += maxCount
             let nextSplitTime = growth - maxLen
             time += nextSplitTime
-            let halfInd
+            let noHalfInd = true
 
-            plant = plant.map(([len, count], ind) => {
+            plant = plant.map(([len, count]) => {
                 if (len + nextSplitTime === half) {
-                    halfInd = ind
+                    noHalfInd = false
+                    count += (maxCount * 2n)
                 }
                 return [len + nextSplitTime, count]
             })
 
-            // Annoying JS things to keep array sorted by max branch len descending without using sort
-            split.forEach(([len, count]) => {
-                let newCount = count * maxCount
-                if (len === half) {
-                    if (halfInd) {
-                        plant[halfInd][1] += newCount
-                    } else {
-                        let insertInd = plant.findIndex(([fl, fc]) => fl < len)
-                        if (insertInd === -1) {
-                            plant.push([len, newCount])
-                        } else {
-                            plant.splice(insertInd, 0, [len, newCount])
-                        }
-                    }
+            if (noHalfInd) {
+                let insertInd = plant.findIndex(([fl, fc]) => fl < half)
+                if (insertInd === -1) {
+                    plant.push([half, 2n * maxCount])
                 } else {
-                    plant.push([len, newCount])
+                    plant.splice(insertInd, 0, [half, 2n * maxCount])
                 }
-            })
+            }
+
+            plant.push([1n, maxCount])
 
             yield { time, splits, limit, elements }
         }
