@@ -32,14 +32,12 @@ const grow = ([growth, limit]) => {
         time = BigInt(growth),
         splits = BigInt(1),
         elements = BigInt(3),
-        split = structuredClone(plant),
-        splitElements = BigInt(3)
+        split = structuredClone(plant)
 
     function* growStep() {
         while (true) {
             let [maxLen, maxCount] = plant.shift()
-            elements -= maxCount
-            elements += (maxCount * splitElements)
+            elements += (maxCount * 2n)
             splits += maxCount
             let nextSplitTime = growth - maxLen
             time += nextSplitTime
