@@ -27,11 +27,24 @@ const grow = ([growth, limit]) => {
     if (limit <= growth) return { time: limit }
 
     let
-        half = (growth - 1n) / 2n,
-        plant = half === 1n ? [[half, BigInt(3)]] : [[half, BigInt(2)], [BigInt(1), BigInt(1)]],
         time = BigInt(growth),
         splits = BigInt(1),
-        elements = BigInt(3),
+        elements = BigInt(3)
+
+    function grow3() {
+        while (elements - splits < limit) {
+            splits += elements
+            elements *= 3n
+            time += 2n
+        }
+        return { time: time }
+    }
+
+    if (growth === 3n) return grow3()
+
+    let
+        half = (growth - 1n) / 2n,
+        plant = half === 1n ? [[half, BigInt(3)]] : [[half, BigInt(2)], [BigInt(1), BigInt(1)]],
         split = structuredClone(plant)
 
     function* growStep() {
@@ -50,6 +63,7 @@ const grow = ([growth, limit]) => {
                 return [len + nextSplitTime, count]
             })
 
+            // Annoying JS things to keep array sorted by max branch len descending without using sort
             split.forEach(([len, count]) => {
                 let newCount = count * maxCount
                 if (len === half) {
