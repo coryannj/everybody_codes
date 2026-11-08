@@ -5,31 +5,28 @@ const filePath = `../../inputs/everybody_codes/${year}/${eventName}/quest${quest
 const [input1, input2, input3] = [1, 2, 3].map((partNo) => fs.readFileSync(`${filePath}_${partNo}.txt`, { encoding: 'utf8', flag: 'a+' }))
 
 const solve = (input, partNo) => {
-    let lines = input.split(/[\r\n]+/).map((x) => x.split(''))
-    let grid = {}, ghosts = []
+    let lines = input.split(/[\r\n]+/).map((x) => x.split('')), grid = {}, ghosts = []
+
     const neighbours = (r, c) => Object.fromEntries([[r + 1, c, 'D'], [r - 1, c, 'U'], [r, c + 1, 'R'], [r, c - 1, 'L']].flatMap(([nr, nc, d]) => lines?.[nr]?.[nc] && lines[nr][nc] !== '#' ? [[d, `${nr}_${nc}_${d}`]] : []))
 
     const dirs = ['D', 'U', 'L', 'R']
     const turn90 = { L: 'U', U: 'R', R: 'D', D: 'L' }
     const turn180 = { L: 'R', R: 'L', U: 'D', D: 'U' }
+    const arrows = { '<': 'L', '>': 'R', '^': 'U', 'v': 'D' }
+    let gInd = 0
 
     lines.forEach((row, rowInd) => {
         row.forEach((val, colInd) => {
             if (val !== '#') {
-                let key = `${rowInd}_${colInd}`
-                let n = neighbours(rowInd, colInd)
+                let key = `${rowInd}_${colInd}`, n = neighbours(rowInd, colInd)
+
                 dirs.forEach((dir) => grid[`${key}_${dir}`] = { baseKey: key, turn90: `${key}_${turn90[dir]}`, turn180: `${key}_${turn180[dir]}`, neighbours: n })
 
-
-                if (val !== '.') {
-                    let d = { '<': 'L', '>': 'R', '^': 'U', 'v': 'D' }
-                    ghosts.push(`${key}_${d[val]}`)
-                }
+                if (val !== '.') ghosts.push([gInd++, `${key}_${arrows[val]}`])
             }
         })
     })
 
-    ghosts = ghosts.map((x, i) => [i, x])
     let collisions = Array(ghosts.length).fill(0).map((x) => x)
     let rounds = 0
     let limit = partNo === 1 ? Infinity : partNo === 2 ? 10000 : 1000000000000
@@ -37,50 +34,45 @@ const solve = (input, partNo) => {
     let advancedLast = false
 
     function* moveGhosts() {
-        const move = ([id, key]) => {
-            let samedir = grid[key]['neighbours'][key.at(-1)]
-            if (samedir) return [id, samedir]
-
-            collisions[id]++
-            return [id, grid[key]['turn90']]
-        }
-
         while (ghosts.length) {
             rounds++
             let counts = {}
-            ghosts = ghosts.map((g) => {
-                let next = move(g)
-                let nKey = grid[next[1]]['baseKey']
-                counts[nKey] = (counts[nKey] || 0) + 1
-                return next
-            }).flatMap(([id, k], i, a) => {
-                let thisCollisions = collisions[id]
 
-                if (thisCollisions >= limit) {
-                    //console.log('id ', id, ' removed at round', rounds, 'before collision')
+            const move = ([id, key]) => {
+                let nextKey = grid[key]['neighbours'][key.at(-1)]
+
+                if (!nextKey) {
+                    if (collisions[id] + 1 === limit) {
+                        states = {}
+                        return []
+                    }
+                    collisions[id]++
+                    nextKey = grid[key]['turn90']
+                }
+                let nKey = grid[nextKey]['baseKey']
+                counts[nKey] = (counts[nKey] || 0) + 1
+
+                return [[id, nextKey]]
+            }
+
+            const collide = ([id, key]) => {
+                if (counts[grid[key]['baseKey']] === 1) return [[id, key]]
+                if (collisions[id] + 1 === limit) {
                     states = {}
                     return []
                 }
+                collisions[id]++
+                return [[id, grid[key]['turn180']]]
+            }
 
-                if (counts[grid[k]['baseKey']] > 1) {
-                    collisions[id]++
-                    if (thisCollisions + 1 === limit) {
-                        //console.log('id ', id, ' removed at round', rounds, 'after nullghost collision')
-                        states = {}
-                        return []
-                    } else {
-                        return [[id, grid[k]['turn180']]]
-                    }
-                }
-                return [[id, k]]
-            })
+            ghosts = ghosts.flatMap(move).flatMap(collide)
 
             yield [rounds, ghosts, collisions]
         }
     }
 
     if (partNo === 1) return moveGhosts().find(([r, g, c]) => r === 10)[2].reduce((a, c) => a + c, 0)
-    //if (partNo === 2) return moveGhosts(0, 10000).find(([r, g, c]) => !g.length)[0]
+    //if (partNo === 2) return moveGhosts(rounds, limit).find(([r, g, c]) => !g.length)[0]
 
     return moveGhosts(rounds, limit).map(([lastRound, lastGhosts, lastCollisions]) => {
         if (advancedLast) return [lastRound, lastGhosts, lastCollisions]
