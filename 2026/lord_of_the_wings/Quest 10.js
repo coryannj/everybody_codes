@@ -104,15 +104,15 @@ const solve = (input, partNo) => {
 
             if (fullCycles < minFullCycles) minFullCycles = fullCycles
 
-            return [i, offset, cycle, fullCycles]
+            return [i, offset, cycle]
         })
 
         cycleRound = firstRound + (minFullCycles * cycleLen)
 
-        cycles.forEach(([id, offset, cycleCollisions, fullCycles, remainder]) => collisions[id] += (cycleCollisions * (minFullCycles - 1)))
+        cycles.forEach(([id, offset, cycleCollisions]) => collisions[id] += (cycleCollisions * (minFullCycles - 1)))
 
         if (lastGhosts.length === 1) {
-            let [id, offset, cycleCollisions, fullCycles] = cycles[0]
+            let [id, offset, cycleCollisions] = cycles[0]
             let [remRounds, remCollisions] = Object.values(states).find(([r, c]) => c[id] === offset + cycleCollisions)
             cycleRound -= cycleLen
             cycleRound += (remRounds - firstRound)
