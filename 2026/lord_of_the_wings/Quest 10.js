@@ -31,10 +31,10 @@ const solve = (input, partNo) => {
     let rounds = 0
     let limit = partNo === 1 ? Infinity : partNo === 2 ? 10000 : 1000000000000
     let states = {}
-    let advancedLast = false
+    let storeState = true
 
     function* moveGhosts() {
-        while (ghosts.length) {
+        while (true) {
             rounds++
             let counts = {}
 
@@ -44,6 +44,7 @@ const solve = (input, partNo) => {
                 if (!nextKey) {
                     if (collisions[id] + 1 === limit) {
                         states = {}
+                        storeState = true
                         return []
                     }
                     collisions[id]++
@@ -59,6 +60,7 @@ const solve = (input, partNo) => {
                 if (counts[grid[key]['baseKey']] === 1) return [[id, key]]
                 if (collisions[id] + 1 === limit) {
                     states = {}
+                    storeState = true
                     return []
                 }
                 collisions[id]++
@@ -74,24 +76,28 @@ const solve = (input, partNo) => {
     if (partNo === 1) return moveGhosts().find(([r, g, c]) => r === 10)[2].reduce((a, c) => a + c, 0)
     //if (partNo === 2) return moveGhosts(rounds, limit).find(([r, g, c]) => !g.length)[0]
 
-    return moveGhosts(rounds, limit).map(([lastRound, lastGhosts, lastCollisions]) => {
-        if (advancedLast) return [lastRound, lastGhosts, lastCollisions]
+    return moveGhosts(rounds, limit).map((x) => {
+        if (!storeState) return x
 
-        let key = JSON.stringify(lastGhosts)
+        let key = JSON.stringify(x[1])
 
         if (!states[key]) {
-            states[key] = [lastRound, [...lastCollisions]]
-            return [lastRound, lastGhosts, lastCollisions]
+            states[key] = [x[0], [...x[2]]]
+            return x
         }
 
-        let [firstRound, firstCollisions] = states[key], cycleLen = lastRound - firstRound, minFullCycles = Infinity
+        let
+            [firstRound, firstCollisions] = states[key],
+            [lastRound, lastGhosts, lastCollisions] = x,
+            cycleLen = lastRound - firstRound,
+            minFullCycles = Infinity
 
         let cycles = lastGhosts.map(([i, k]) => {
             let offset = firstCollisions[i], target = limit - offset, cycle = lastCollisions[i] - offset, fullCycles = Math.floor(target / cycle)
 
             if (fullCycles < minFullCycles) minFullCycles = fullCycles
 
-            return [i, offset, cycle]
+            return [i, cycle]
         })
 
         rounds = firstRound + (minFullCycles * cycleLen)
@@ -100,13 +106,13 @@ const solve = (input, partNo) => {
 
         if (lastGhosts.length === 1) {
             rounds -= cycleLen
-            advancedLast = true
             minFullCycles--
         }
 
-        cycles.forEach(([id, offset, cycleCollisions]) => collisions[id] += (cycleCollisions * minFullCycles))
+        cycles.forEach(([id, cycleCollisions]) => collisions[id] += (cycleCollisions * minFullCycles))
 
         states = {}
+        storeState = false
 
         return [rounds, ghosts, collisions]
     }).find(([r, g, c]) => g.length === 0)[0]
