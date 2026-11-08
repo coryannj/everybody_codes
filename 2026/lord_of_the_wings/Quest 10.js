@@ -58,6 +58,7 @@ const solve = (input, partNo) => {
 
                 if (thisCollisions >= limit) {
                     //console.log('id ', id, ' removed at round', rounds, 'before collision')
+                    states = {}
                     return []
                 }
 
@@ -65,6 +66,7 @@ const solve = (input, partNo) => {
                     collisions[id]++
                     if (thisCollisions + 1 === limit) {
                         //console.log('id ', id, ' removed at round', rounds, 'after nullghost collision')
+                        states = {}
                         return []
                     } else {
                         return [[id, grid[k]['turn180']]]
