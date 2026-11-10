@@ -37,7 +37,7 @@ const solve = (input, partNo) => {
             let subTotal = 0
             if (!cache[i]) cache[i] = {}
 
-            for (j = 1; j <= portals; j++) {
+            for (j = 1; j <= p; j++) {
                 if (i === j) continue;
 
                 if (cache[i]?.[j]) {
