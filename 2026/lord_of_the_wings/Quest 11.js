@@ -12,8 +12,6 @@ const solve = (input, partNo) => {
     for (i = 1; i <= portals; i++) {
         nodes[i] = new Set()
         for (j = 1; j <= neighbours; j++) {
-            let forwards = (i + j) % portals || portals
-            let backwards = (i + portals - j) % portals || portals
             nodes[i].add((i + j) % portals || portals)
             nodes[i].add((i + portals - j) % portals || portals)
         }
