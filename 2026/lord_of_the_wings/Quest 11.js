@@ -28,7 +28,7 @@ const solve = (input, partNo) => {
             while (!queue.has(target)) {
                 seen = seen.union(queue)
                 steps++
-                queue = new Set(queue.values().flatMap((v) => n[v] || [])).difference(seen)
+                queue = new Set(queue.values().flatMap((v) => n[v]?.difference(seen) || []))
             }
             return steps
         }
