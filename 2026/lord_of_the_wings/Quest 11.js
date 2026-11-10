@@ -17,62 +17,63 @@ const solve = (input, partNo) => {
         }
     }
 
-    const strain = (p, n, initial = false, returnCache = false) => {
-        let limit = initial ? 1 : p, sum = 0, cache = {}, max = -Infinity
+    let baseCache = Object.fromEntries(Object.entries(nodes).map(([k, v]) => [k, Object.fromEntries(v.values().map((val) => [val, 1]).toArray())]))
+
+    const strain = (p, n, c, initial = false, returnCache = false) => {
+        let limit = initial ? 1 : p, sum = 0, cache = structuredClone(c), max = -Infinity
 
         const bfs = (start, target) => {
             if (n[start].has(target)) return 1
-            let queue = n[start], seen = new Set([start]).union(queue), steps = 1
+            let queue = n[start], seen = new Set([start]), steps = 1
             while (!queue.has(target)) {
+                seen = seen.union(queue)
                 steps++
                 queue = new Set(queue.values().flatMap((v) => n[v] || [])).difference(seen)
-                seen = seen.union(queue)
             }
             return steps
         }
 
         for (i = 1; i <= limit; i++) {
             let subTotal = 0
-            if (!initial && !cache[i]) cache[i] = {}
+            if (!cache[i]) cache[i] = {}
+
             for (j = 1; j <= portals; j++) {
                 if (i === j) continue;
 
-                if (!initial) {
-                    if (!cache[j]) {
-                        cache[j] = {}
-                    } else if (cache[i]?.[j]) {
-                        subTotal += cache[i][j]
-                        continue;
-                    }
+                if (cache[i]?.[j]) {
+                    subTotal += cache[i][j]
+                    continue;
                 }
+
+                if (!cache[j]) cache[j] = {}
 
                 let val = bfs(i, j)
                 subTotal += val
 
-                if (!initial) {
-                    cache[i][j] = val
-                    cache[j][i] = val
-                    if (val > max) max = val
-                }
+                cache[i][j] = val
+                cache[j][i] = val
+                if (val > max) max = val
             }
 
             sum += subTotal
         }
-        if (initial) sum *= p
 
+        if (initial) sum *= p
         return returnCache ? [sum, max, cache] : sum
     }
 
-    let s1 = strain(portals, nodes, true)
+    let s1 = strain(portals, nodes, baseCache, true)
 
     shortcuts.forEach(([n1, n2]) => {
         nodes[n1].add(n2)
         nodes[n2].add(n1)
+        baseCache[n1][n2] = 1
+        baseCache[n2][n1] = 1
     })
 
-    if (partNo === 1) return s1 - strain(portals, nodes, false)
+    if (partNo === 1) return s1 - strain(portals, nodes, baseCache, false)
 
-    let [_, max, cache] = strain(portals, nodes, false, true)
+    let [_, max, cache] = strain(portals, nodes, baseCache, false, true)
     let offset = 1 // increase to 3 for examples
 
     // Part 2
@@ -82,7 +83,7 @@ const solve = (input, partNo) => {
 
         pre.forEach(([n1, n2]) => {
             nodes[n1].add(n2)
-            let v = strain(portals, nodes, false)
+            let v = strain(portals, nodes, baseCache, false)
             if (v < p2Min) p2Min = v
             nodes[n1].delete(n2)
         })
@@ -102,20 +103,19 @@ const solve = (input, partNo) => {
     const makeConnections = (arr) => {
         let startingElement = arr[0], arrCopy = [...arr], first = p3Max === 0, pairs = makePairs(arr)
 
-        let queue = pairs.flatMap((x) => {
-            if (!x.has(startingElement)) return []
-            let dist = getDist(x)
-            return first || dist + (3 * max) >= p3Max - offset ? [[dist, [x]]] : []
-        })
+        const pairFilter = (pair, nextVal, prevDist = 0, prev = []) => {
+            let pLen = prev.length
+            if (!pair.has(nextVal) || (pLen && prev.some((item) => !item.isDisjointFrom(pair)))) return []
+            let nextDist = getDist(pair)
+            return !pLen || prevDist + nextDist + ((4 - (pLen + 1)) * max) >= p3Max - offset ? [[prevDist + nextDist, prev.concat(pair)]] : []
+        }
+
+        let queue = pairs.flatMap((x) => pairFilter(x, startingElement))
 
         for (i = 0; i < 3; i++) {
             queue = queue.flatMap(([dist, q]) => {
                 let nextElement = arrCopy.find((v) => q.every((item) => !item.has(v)))
-                return pairs.flatMap((p) => {
-                    if (!p.has(nextElement) || q.some((item) => !item.isDisjointFrom(p))) return []
-                    let nextDist = getDist(p)
-                    return dist + nextDist + ((4 - (i + 2)) * max) >= p3Max - offset ? [[dist + nextDist, q.concat(p)]] : []
-                })
+                return pairs.flatMap((p) => pairFilter(p, nextElement, dist, q))
             })
 
             if (!queue.length) return []
@@ -130,7 +130,7 @@ const solve = (input, partNo) => {
 
     connections.forEach((c) => makeConnections(c).forEach(([dist, pairs]) => {
         pairs.forEach((p) => setNodes(p))
-        let val = strain(portals, nodes, false)
+        let val = strain(portals, nodes, baseCache, false)
         if (val < p3min) p3min = val
         pairs.forEach((p) => deleteNodes(p))
     }))
