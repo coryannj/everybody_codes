@@ -24,11 +24,15 @@ class Ghost {
     }
 
     get key() {
-        this._key
+        return this._key
     }
 
     set key(k) {
         this._key = k
+    }
+
+    set dir(d) {
+        this._dir = d
     }
 
     // turn(degrees) {
@@ -37,30 +41,30 @@ class Ghost {
 
 }
 
-// class Point {
-//     constructor(key, n) {
-//         this._key = key
-//         this._neighbours = n
-//     }
+class Point {
+    constructor(key, n) {
+        this._key = key
+        this._neighbours = n
+    }
 
-//     neighbour(dir) {
-//         return this._neighbours[dir]
-//     }
-// }
+    neighbour(dir) {
+        return this._neighbours[dir]
+    }
+}
 
 class Grid {
     constructor(limit, partNo) {
-        //this._points = {}
-        this._limit = limit
-        this._storeStates = partNo < 3 ? false : true
+        this._points = {};
+        this._limit = limit;
+        this._storeStates = partNo < 3 ? false : true;
     }
-    _rounds = 0
-    _setState = false
-    _advancedLast = false
-    _states = {}
-    _ghosts = new Map()
-    _collisions = new Map()
-    _points = undefined
+    _rounds = 0;
+    _setState = false;
+    _advancedLast = false;
+    _states = {};
+    _ghosts = new Map();
+    _collisions = new Map();
+    //_points = undefined
     _turn = {
         90: { L: 'U', U: 'R', R: 'D', D: 'L' },
         180: { L: 'R', R: 'L', U: 'D', D: 'U' }
@@ -86,9 +90,9 @@ class Grid {
         return this._turn
     }
 
-    set points(obj) {
-        this._points = obj
-    }
+    // set points(obj) {
+    //     this._points = obj
+    // }
 
     point(key) {
         return this._points[key]
@@ -103,28 +107,37 @@ class Grid {
 
         if (val + 1 < this._limit) {
             this._collisions.set(id, val + 1)
+            //console.log(this._collisions)
         } else {
+            console.log('ghost ', id, val, ' deleted at round ', this.rounds)
+            console.log(this.ghost(id).dir, this.ghost(id).key, this.ghost(id).id)
             this._ghosts.delete(id)
             this._collisions.delete(id)
 
         }
     }
 
-    turn(g, degrees) {
-        this.collision(g.id)
-        return g.key = this.turn[degrees][g.dir]
+    makeTurn(g, degrees) {
+
+        g._dir = this._turn[degrees][g._dir]
+        this.collision(g._id)
     }
 
     move(g) {
-        //console.log('g is ', g)
-        console.log(this.point(g.key))
-        g.key = this.point(g.key)?.[g.dir] || this.turn(g, 90)
-        // if (samedir) {
-        //     g.key = samedir
-        // } else {
-        //     g.turn(90)
-        //     this.collision(g._id)
-        // }
+        //console.log('g is ', g, this._points[g._key], this._points[g._key][g._dir])
+        //console.log(this.point(g.key))
+        //g.key = this.point(g._key)?.[g._dir] || this.makeTurn(g, 90)
+        let samedir = this._points[g._key][`_neighbours`][g._dir]
+        //console.log('samedir is ', samedir)
+        if (samedir) {
+            g._key = samedir
+        } else {
+            //this.makeTurn(g, 90)
+            g._dir = this._turn[90][g._dir]
+            //console.log('dir is now ', g.dir)
+            //g.turn(90)
+            this.collision(g._id)
+        }
     }
 
     moveGhosts() {
@@ -132,13 +145,15 @@ class Grid {
     }
 
     sameSpace() {
-        Map.groupBy(this._ghosts.values(), ({ _key }) => _key).values().filter((g) => g.length > 1).forEach((g) => {
-            if (g.length > 1) {
-                g.forEach((ghost) => {
-                    ghost.turn(180)
-                    this.collision(ghost._id)
-                })
-            }
+        Map.groupBy(this._ghosts.values(), ({ _key }) => _key).values().filter((arr) => arr.length > 1).forEach((arr) => {
+            //if (g.length > 1) {
+            arr.forEach((g) => {
+                //this.makeTurn(ghost, 180)
+                g._dir = this._turn[180][g._dir]
+                this.collision(g._id)
+
+            })
+            //}
         })
     }
 
@@ -150,14 +165,15 @@ class Grid {
 
     }
 
-    // addPoint(k, n) {
-    //     //this._points[k] = new Point(k, n)
-    //     this._points[k]
-    // }
+    addPoint(k, n) {
+        this._points[k] = new Point(k, n)
+        //this._points[k]
+    }
 
     addGhost(id, key, dir) {
         this._ghosts.set(id, new Ghost(id, key, dir))
         this._collisions.set(id, 0)
+        //console.log(this.ghost(id))
     }
 
     *moveRound() {
@@ -179,35 +195,28 @@ const neighbours = (r, c) => Object.fromEntries([[r + 1, c, 'D'], [r - 1, c, 'U'
 
 const solve = (input, partNo) => {
     let t0 = performance.now()
-    let limit = partNo === 1 ? Infinity : partNo === 2 ? 10000 : 1000000000000
-
-    let grid = new Grid(limit, partNo)
-
-    let lines = input.split(/[\r\n]+/).map((x) => x.split(''))
+    let limit = partNo === 1 ? Infinity : partNo === 2 ? 10000 : 1000000000000, grid = new Grid(limit, partNo), lines = input.split(/[\r\n]+/).map((x) => x.split('')), gInd = 0
 
     const neighbours = (r, c) => Object.fromEntries([[r + 1, c, 'D'], [r - 1, c, 'U'], [r, c + 1, 'R'], [r, c - 1, 'L']].flatMap(([nr, nc, d]) => lines[nr][nc] !== '#' ? [[d, `${nr}_${nc}`]] : [[d, null]]))
 
-    let gInd = 0
+    lines.forEach((row, rowInd) => {
+        row.forEach((val, colInd) => {
+            if (val !== '#') {
+                let key = `${rowInd}_${colInd}`, n = neighbours(rowInd, colInd)
+                grid.addPoint(key, n)
 
-    let obj = Object.fromEntries(
-        lines.flatMap((row, rowInd) => {
-            return row.flatMap((val, colInd) => {
-                if (val !== '#') {
-                    let key = `${rowInd}_${colInd}`, n = neighbours(rowInd, colInd)
-                    //grid.addPoint(key, n)
-
-                    if (val !== '.') {
-                        grid.addGhost(gInd++, key, val)
-                    }
-                    return [[key, n]]
+                if (val !== '.') {
+                    grid.addGhost(gInd++, key, val)
                 }
-                return []
-            })
+                //return [[key, n]]
+            }
+            //return []
         })
-    )
+    })
+    //)
 
     //console.log('obj is ', obj)
-    grid.points = obj
+    //grid.points = obj
     //grid.stateKey()
     //console.log(performance.now() - t0)
     if (partNo === 1) return grid.moveRound().find(([r, c]) => r === 10)[1].reduce((a, c) => a + c, 0)
@@ -216,7 +225,8 @@ const solve = (input, partNo) => {
 
 
 }
-
+console.log(solve(input1, 1))
+console.log(solve(input2, 2))
 //solve(input1, 1)
 let t1 = performance.now()
 solve(input1, 1)
