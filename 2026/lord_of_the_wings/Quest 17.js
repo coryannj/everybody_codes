@@ -50,7 +50,7 @@ const solve = (input, partNo) => {
         return partNo === 1 ? steps : seen.values().reduce((a, c) => a + pointsByKey[c]['neighbours'].size, 0)
     }
 
-    if (partNo === 1) return bfs(new Set(['0_0']), partNo, endKey)
+    if (partNo === 1) return bfs(new Set(['0_0']), partNo)
 
     let allEdges = points.flatMap((p) => p.val === '#' ? [4 - (p?.['neighbours']?.size || 0)] : []).reduce((a, c) => a + c, 0)
 
