@@ -26,11 +26,7 @@ const solve = (input, partNo) => {
     lines.forEach((row, rowInd) => {
         row.forEach((val, colInd) => {
             if (val === '#') {
-                if (partNo < 3) {
-                    points.push(new Point(`${rowInd}_${colInd}`, rowInd, colInd, val, getSolid(rowInd, colInd), null))
-                } else {
-                    points.push(new Point(`${rowInd}_${colInd}`, rowInd, colInd, val, null, null))
-                }
+                points.push(new Point(`${rowInd}_${colInd}`, rowInd, colInd, val, getSolid(rowInd, colInd), null))
             } else if (partNo === 3) {
                 points.push(new Point(`${rowInd}_${colInd}`, rowInd, colInd, val, getSolid(rowInd, colInd), getGaps(rowInd, colInd)))
             }
