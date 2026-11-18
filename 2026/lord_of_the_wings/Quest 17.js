@@ -61,7 +61,7 @@ const solve = (input, partNo) => {
     let solidEdges = leftBottomSolid.length + isBottomCorner
 
     let leftBottomGaps = points.filter((p) => p.val === '.' && (p.col === 0 || p.row === rowLen - 1))
-    let gapEdges = bfs(new Set(leftBottomGaps.map((p) => p.key), partNo))
+    let gapEdges = bfs(new Set(leftBottomGaps.map((p) => p.key)), partNo)
     let totalSideEdges = solidEdges + gapEdges
 
     return Math.min(totalSideEdges, allEdges - totalSideEdges)
