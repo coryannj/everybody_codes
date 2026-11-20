@@ -34,18 +34,75 @@ class Stack {
     }
 
     spells() {
-        if (!this.edges) return 1
-        if (this.edges.length === 1) return edges[0].length
-        if (this.edges.length === 2) return 2
-        if (this.edges.length === 4) return edges[0].length + edges[1].length
+        if (!this.edges) return 1 // point
+        // if (this.edges.length === 4) {
+        //     console.log('is 4', this.edges.length, this.edges[0].length, this.edges[1].length, Math.min(this.edges[0].length, this.edges[1].length))
+        //     //this.edges.forEach((e) => console.log(e))
+        // }
+
+        if (this.edges.length === 1) return 1 // single line
+        if (this.edges.length === 2) return 2 // L shape both width 1
+        if (this.edges.length === 4) return Math.min(this.edges[0].length, this.edges[1].length) // rectangle
         let fromConcave = this.edges.filter((e) => e.vertices.some((v) => v.type === 'concave'))
-        console.log(fromConcave)
+        if (fromConcave.length > 2) { // L shape - one arm width 1
+            console.log('fromConcave.length >2')
+            let vFromConcave = fromConcave.filter((e) => e.direction === 'v')
+            let hFromConcave = fromConcave.filter((e) => e.direction === 'h')
+            //console.log('fromConcave.length >2', 'vEdges is ', vFromConcave, 'hedges is ', hFromConcave)
+
+            let arm = vFromConcave.length === 1 ? vFromConcave[0] : hFromConcave[0]
+            let newWidth = vFromConcave.length === 1 ? arm.end.row - arm.start.row : arm.end.col - arm.start.col
+            let armCornerId = arm.vertices.find((p) => p.type !== 'concave').id
+            //console.log('newwidth is ', newWidth, 'armCorner is ', armCornerId)
+            let armEdge = this.edges.find((e) => (e.start.id === armCornerId && e.end.type === 'convex') || (e.start.type === 'convex' && e.end.id === armCornerId))
+            if (!armEdge) {
+                console.log('           ')
+                console.log('no armEdge')
+                console.log('vfromcon', vFromConcave)
+                console.log('hfromcon', hFromConcave)
+                this.edges.forEach((e) => console.log(e))
+            }
+            //console.log('armEdge is ', armEdge)
+            return 1 + Math.min(newWidth, armEdge.length)
+        } else {
+            let [vFromConcave, hFromConcave] = fromConcave[0].direction === 'v' ? fromConcave : fromConcave.reverse()
+
+            let vArmCornerId = vFromConcave.start.type === 'convex' ? vFromConcave.start.id : vFromConcave.end.id
+            let vArmEdge = this.edges.find((e) => (e.start.id === vArmCornerId && e.end.type === 'convex') || (e.start.type === 'convex' && e.end.id === vArmCornerId))
+            let vArmLen = vArmEdge.length
+            let vNewLen = vFromConcave.end.row - vFromConcave.start.row
+
+            let hArmCornerId = hFromConcave.start.type === 'convex' ? hFromConcave.start.id : hFromConcave.end.id
+            let hArmEdge = this.edges.find((e) => (e.start.id === hArmCornerId && e.end.type === 'convex') || (e.start.type === 'convex' && e.end.id === hArmCornerId))
+            let hArmLen = hArmEdge.length
+            let hNewLen = hFromConcave.end.col - hFromConcave.start.col
+            //console.log('hFromConcave is ', hFromConcave, 'hid', hArmCornerId, 'hArmEdge', hArmEdge)
+            console.log('L shape arms >1', 'vArm,vNew,vLong', vArmLen, vNewLen, vFromConcave.length + hArmLen - 1, ' harm hnew hlong', hArmLen, hNewLen, hFromConcave.length + vArmLen - 1)
+            console.log('vArmLen + Math.min(hArmLen, hNewLen)', vArmLen + Math.min(hArmLen, hNewLen))
+            console.log('hArmLen + Math.min(vArmLen, vNewLen)', hArmLen + Math.min(vArmLen, vNewLen))
+            console.log('vFromConcave.length + hArmLen - 1', vFromConcave.length + hArmLen - 1)
+            console.log('hFromConcave.length + vArmLen - 1', hFromConcave.length + vArmLen - 1)
+            console.log('returned', Math.min(vArmLen + Math.min(hArmLen, hNewLen), hArmLen + Math.min(vArmLen, vNewLen), vFromConcave.length + hArmLen - 1, hFromConcave.length + vArmLen - 1))
+            //console.log(vArmLen + Math.min(hArmLen, hNewLen), hArmLen + Math.min(vArmLen, vNewLen), vFromConcave.length + hArmLen - 1, hFromConcave.length + vArmLen - 1)
+
+            //if (vArmLen < hArmLen) console.log('vArmLen < hArmLen', vArmLen, Math.min(hArmLen, hNewLen))
+            //if (hArmLen < vArmLen) console.log('hArmLen < vArmLen', hArmLen, Math.min(vArmLen, vNewLen))
+            //if (vArmLen === hArmLen) console.log('vArmLen === hArmLen', vArmLen, Math.min(vNewLen, hNewLen))
+
+            //if (vArmLen < hArmLen) return vArmLen + Math.min(hArmLen, hNewLen)
+            //if (hArmLen < vArmLen) return hArmLen + Math.min(vArmLen, vNewLen)
+
+            // return Math.min(vArmLen + Math.min(hArmLen, hNewLen), hArmLen + Math.min(vArmLen, vNewLen), vFromConcave.length + hArmLen - 1, hFromConcave.length + vArmLen - 1)
+            return Math.min(vArmLen + Math.min(hArmLen, hNewLen), hArmLen + Math.min(vArmLen, vNewLen))
+
+        }
     }
 
 }
 
 //let vertices = []
 let lines = input1.split(/[\r\n]+/).map((x) => x.split(''))
+console.log(lines.length, lines[0].length)
 let pointId = 0
 let rId = 0
 
@@ -65,8 +122,11 @@ const findCorners = (r, c) => {
     if (neighbours.length < 2) return [new Point(pointId++, r, c, neighbours, false)]
 
     let isConvex = neighbours.length === 2 && cDirs.some((cd) => cd.split('').every((d) => neighbours.includes(d)))
-    let isConcave = nCorners(r, c)?.some((nd) => nd.split('').every((d) => neighbours.includes(d)))
+    let cNeighbours = nCorners(r, c).filter((nd) => nd.split('').every((d) => neighbours.includes(d)))
+    let isConcave = !!cNeighbours.length
     if (!isConvex && !isConcave) return []
+
+    if (isConcave && neighbours.length === 4) neighbours = cNeighbours[0].split('')
 
     let cornerType = isConvex && isConcave ? 'both' : isConvex ? 'convex' : 'concave'
 
@@ -82,6 +142,8 @@ let edges = []
 let stacks = []
 let edgeId = 0
 
+// pointsByRow.entries().forEach(([r, a]) => { console.log('         '), console.log(r); a.forEach((v) => console.log(v)) })
+
 // Make horizontal edges (and single point stacks)
 pointsByRow.entries().forEach(([r, arr]) => {
     let vArr = arr.slice(0)
@@ -91,12 +153,12 @@ pointsByRow.entries().forEach(([r, arr]) => {
             stacks.push(new Stack(null, [v]))
         } else if (v.neighbours.includes('R')) {
             if (vArr.length && vArr[0].neighbours.includes('L')) {
-                let next = vArr.shift()
+                let next = vArr[0]
                 edges.push(new Edge(edgeId++, [v, next]))
-                if (vArr.length && vArr[0].neighbours.includes('L')) {
-                    let nextNext = vArr.shift()
-                    edges.push(new Edge(edgeId++, [next, nextNext]))
-                }
+                // if (vArr.length && next.neighbours.includes('R') && vArr[0].neighbours.includes('L')) {
+                //     let nextNext = vArr[0]
+                //     edges.push(new Edge(edgeId++, [next, nextNext]))
+                // }
             }
         }
     }
@@ -109,12 +171,12 @@ pointsByCol.entries().forEach(([c, arr]) => {
         let v = vArr.shift()
         if (v.neighbours.includes('D')) {
             if (vArr.length && vArr[0].neighbours.includes('U')) {
-                let next = vArr.shift()
+                let next = vArr[0]
                 edges.push(new Edge(edgeId++, [v, next]))
-                if (vArr.length && vArr[0].neighbours.includes('U')) {
-                    let nextNext = vArr.shift()
-                    edges.push(new Edge(edgeId++, [next, nextNext]))
-                }
+                // if (vArr.length && next.neighbours !vArr[0].neighbours.includes('D')) {
+                //     let nextNext = vArr.shift()
+                //     edges.push(new Edge(edgeId++, [next, nextNext]))
+                // }
             }
         }
     }
@@ -147,5 +209,61 @@ edges.forEach((e, i, a) => {
         stacks.push(new Stack(adjacent))
     }
 })
-console.log(stacks[1].spells())
-//stacks.forEach((s) => console.log(s))
+
+// stacks.forEach((s) => {
+//     console.log('               ')
+//     console.log('stack edges length', s?.edges?.length)
+//     if (s.edges && s.edges.length > 6) {
+//         s.edges.forEach((e) => console.log(e))
+//         s.points.forEach((p) => console.log(p))
+//     }
+
+// })
+
+
+
+
+// console.log(stacks.map((x) => ['spells', x.spells(), 'edges len ', x?.edges?.length]))
+// console.log(stacks.reduce((a, c) => a + c.spells(), 0))
+
+
+stacks.sort((s1, s2) => {
+    let s1MinRow = Math.min(...s1.points.map((p) => p.row))
+    let s2MinRow = Math.min(...s2.points.map((p) => p.row))
+    if (s1MinRow === s2MinRow) {
+        let s1MinCol = Math.min(...s1.points.map((p) => p.col))
+        let s2MinCol = Math.min(...s2.points.map((p) => p.col))
+        return s1MinCol - s2MinCol
+    }
+    return s1MinRow - s2MinRow
+})
+
+// stacks.forEach((s, i) => {
+//     console.log('                   ')
+//     console.log('                   ')
+
+//     if (s.points.length === 1) {
+//         console.log(i, ' point', s.points[0])
+//     } else {
+//         let mincol = Math.min(...s.points.map((p) => p.col))
+//         let maxcol = Math.max(...s.points.map((p) => p.col))
+//         let minrow = Math.min(...s.points.map((p) => p.row))
+//         let maxrow = Math.max(...s.points.map((p) => p.row))
+
+//         lines.filter((x, rowInd) => minrow <= rowInd && rowInd <= maxrow).forEach((row) => {
+//             console.log(row.slice(mincol, maxcol + 1).join(''))
+//         })
+//         console.log('                   ')
+
+//         console.log(i, ' edges len', s.edges.length)
+//         console.log('minrow,mincol', minrow, mincol)
+//         console.log('maxrow,mincol', maxrow, maxcol)
+//         //console.log('spells is ', s.spells())
+//         s.edges.forEach((e) => console.log(e))
+//     }
+
+
+// })
+
+
+console.log(stacks.reduce((a, c) => a + c.spells(), 0))
