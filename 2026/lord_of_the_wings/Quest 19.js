@@ -45,7 +45,7 @@ const solveP2 = (input) => {
 
     while (subSeen.size < 6) {
         let [id, count, colours] = aggCounts.find(([id2, count2, colours2], i, a) => !subSeen.has(id2) && colours2.filter((c) => !subSeen.has(c)).length === 1)
-        colour = colours.filter((v) => !subSeen.has(v))[0]
+        colour = colours.find((v) => !subSeen.has(v))
         subSeen.add(id)
         subSeen.add(colour)
         subMap[id] = colour
