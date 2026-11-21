@@ -37,32 +37,29 @@ const change = {
 
 const toBase11 = (str) => str.toString().replaceAll(/\w+/g, m => parseInt(m, 11))
 
-const isEqual = (str, partNo) => {
-    let [e1, e2] = partNo === 1 ? str.split(' = ') : str.split(' = ').map((x) => toBase11(x))
+const isEqual = (str, partNo) => partNo === 1 ? eval(str) : eval(toBase11(str))
 
-    return eval(e1) === eval(e2)
-}
-
-const getSegments = (str) => !!str ? str.split('').reduce((a, c) => a + segments[c], 0) : 0
+const getSegments = (str) => !!str ? str.split('').reduce((a, c) => a + segments[c], 0) - 4 : 0
 
 function* makeEqual(str) {
-    let splitArr = str.split('')
-
-    for (const [index, s] of splitArr.entries()) {
+    for (const [index, s] of Array.prototype.entries.call(str)) {
         if (!change[s] && !remove[s]) continue;
         if (change[s]) {
             for (const sub of change[s]) {
-                yield splitArr.with(index, sub).join('')
+                yield str.slice(0, index) + sub + str.slice(index + 1)
             }
         }
         if (remove[s]) {
             for (const r of remove[s]) {
-                let removed = splitArr.with(index, r)
-                for (const [rIndex, rVal] of removed.entries()) {
+                for (const [rIndex, rVal] of Array.prototype.entries.call(str)) {
                     if (rIndex === index || !add[rVal]) continue;
 
                     for (const addVal of add[rVal]) {
-                        yield removed.with(rIndex, addVal).join('')
+                        if (rIndex < index) {
+                            yield str.slice(0, rIndex) + addVal + str.slice(rIndex + 1, index) + r + str.slice(index + 1)
+                        } else {
+                            yield str.slice(0, index) + r + str.slice(index + 1, rIndex) + addVal + str.slice(rIndex + 1)
+                        }
                     }
                 }
             }
@@ -71,7 +68,7 @@ function* makeEqual(str) {
 }
 
 const solve = (input, partNo) => {
-    let segments = input.split(/[\r\n]+/).flatMap((x) => isEqual(x, partNo) || (partNo === 3 && makeEqual(x).some((y) => isEqual(y, partNo))) ? [getSegments(x)] : []).reduce((a, c) => a + c, 0)
+    let segments = input.replaceAll('=', '===').split(/[\r\n]+/).flatMap((x) => isEqual(x, partNo) || (partNo === 3 && makeEqual(x).some((y) => isEqual(y, partNo))) ? [getSegments(x)] : []).reduce((a, c) => a + c, 0)
 
     return partNo === 1 ? segments : (segments).toString(11)
 }
