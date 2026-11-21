@@ -46,19 +46,19 @@ function* makeEqual(str) {
         if (!change[s] && !remove[s]) continue;
         if (change[s]) {
             for (const sub of change[s]) {
-                yield str.slice(0, index) + sub + str.slice(index + 1)
+                yield `${str.slice(0, index)}${sub}${str.slice(index + 1)}`
             }
         }
-        if (remove[s]) {
-            for (const r of remove[s]) {
-                for (const [rIndex, rVal] of Array.prototype.entries.call(str)) {
-                    if (rIndex === index || !add[rVal]) continue;
 
-                    for (const addVal of add[rVal]) {
-                        if (rIndex < index) {
-                            yield str.slice(0, rIndex) + addVal + str.slice(rIndex + 1, index) + r + str.slice(index + 1)
+        if (remove[s]) {
+            for (const [addIndex, val] of Array.prototype.entries.call(str)) {
+                if (addIndex === index || !add[val]) continue;
+                for (const removeSub of remove[s]) {
+                    for (const addSub of add[val]) {
+                        if (addIndex < index) {
+                            yield `${str.slice(0, addIndex)}${addSub}${str.slice(addIndex + 1, index)}${removeSub}${str.slice(index + 1)}`
                         } else {
-                            yield str.slice(0, index) + r + str.slice(index + 1, rIndex) + addVal + str.slice(rIndex + 1)
+                            yield `${str.slice(0, index)}${removeSub}${str.slice(index + 1, addIndex)}${addSub}${str.slice(addIndex + 1)}`
                         }
                     }
                 }
