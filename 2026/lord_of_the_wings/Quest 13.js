@@ -65,7 +65,7 @@ class Hand {
 
     static getSignals(h1, h2) {
         if (h1.seconds === 0 && h2.seconds === 0) return 0
-        let thisLCM = lcm(h1.hands, h2.hands), minLen = h1.seconds || h2.seconds, maxLen = Math.max(h1.seconds, h2.seconds)
+        let thisLCM = lcm(h1.hands, h2.hands), minLen = h1.seconds || h2.seconds, maxLen = h2.seconds
 
         let doLoops = thisLCM < minLen
         let len = doLoops ? thisLCM : maxLen
