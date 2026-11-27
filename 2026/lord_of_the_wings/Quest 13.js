@@ -1,103 +1,155 @@
-const { off } = require('cluster')
-const fs = require('fs')
+import { lcm, gcd } from '../../inputs/utils.js';
+import { readFileSync } from 'node:fs';
 const [eventName, year, quest] = ['lord_of_the_wings', 2026, 13]
 const filePath = `../../inputs/everybody_codes/${year}/${eventName}/quest${quest}`
-const [input1, input2, input3] = [1, 2, 3].map((partNo) => fs.readFileSync(`${filePath}_${partNo}.txt`, { encoding: 'utf8', flag: 'a+' }))
-
-
-let lines = input1.split(/[\r\n]+/).map((x, i) => i === 1 ? x.split(' ')[1].split(':').map((y) => y === 'CW' ? 1 : -1) : x.split(' ')[1].match(/\d+/g).map(Number))
-let cLen = lines[0].length
-
-const getMoves = (hands, step, start) => {
-    let moves = Array(hands).fill(0).map((x, i) => x + (i * (360 / hands))).map((x, i, a) => step > 0 ? [x, a[i + 1] || 0] : [a.at(i + step), x])
-
-    if (start === 0) return step > 0 ? moves : moves.reverse()
-    let first, second
-    if (step === 1) {
-        first = moves.slice(start)
-        second = moves.slice(0, start)
-    } else {
-        first = moves.slice(0, start + 1).reverse()
-        second = moves.slice(start + 1).reverse()
-    }
-    return first.concat(second)
-}
-
-//console.log(m(8, -1, 4))
-
-const lastMove = (moves, seconds, step) => {
-    let last = moves[(seconds - 1) % moves.length]
-    console.log('last is ', seconds, last)
-    return step > 0 ? last[1] : last[0]
-}
-
-//console.log(lastMove(m(8, -1, 4), 7, -1))
+const [input1, input2, input3] = [1, 2, 3].map((partNo) => readFileSync(`${filePath}_${partNo}.txt`, { encoding: 'utf8', flag: 'a+' }))
 
 class Hand {
-    constructor([hands, step, start, seconds]) {
+    constructor([hands, step, start, seconds], multiple, startVal, endVal, moves) {
         this.hands = hands
         this.seconds = seconds
         this.start = start
         this.step = step
-        this.spacing = 360 / hands
-        this.moves = getMoves(hands, step, start)
+        this.spacing = multiple / hands
+        this.startVal = startVal
+        this.endVal = endVal
+        this.moves = moves
+        this.multiple = multiple
     }
 
-    // set seconds(s) {
-    //     this.seconds =
-    // }
-
     *allMoves() {
-        let last = lastMove(this.moves, this.seconds, this.step)
+        let currVal = this.startVal
+        let t = 0
 
-        //this.seconds--
         outer: {
             while (this.seconds) {
                 for (const m of this.moves) {
-                    this.seconds--
-                    yield [this.seconds, this.step, m]
-                    if (this.seconds === 0) break outer
-
+                    t++
+                    yield [t, this.step, currVal, m]
+                    if (t === this.seconds) break outer;
+                    currVal = m
                 }
             }
         }
 
         while (true) {
-            yield [this.seconds, this.step, last]
+            yield [null, this.step, this.endVal, this.endVal]
         }
     }
 
+    static isMeeting([t1, d1, p1, n1], [t2, d2, p2, n2], multiple) {
+        if ((!t1 && !t2) || (p1 === p2)) return false
+        if (n1 === n2) return true
+        if (!t1) return d2 > 0 ? (p2 < n1 && n1 <= (n2 || multiple)) : (n2 <= n1 && n1 < (p2 || multiple))
+
+        if (d1 === d2) {
+            if (d1 > 0) { // both clockwise
+                return (p2 < p1 && (n1 || multiple) < (n2 || multiple)) || (p1 < p2 && (n2 || multiple) < (n1 || multiple))
+            } else { // both counter clockwise
+                return (n1 < n2 && (p2 || multiple) < (p1 || multiple)) || (n2 < n1 && (p1 || multiple) < (p2 || multiple))
+            }
+        } else {
+            if (d1 > 0) {
+                return (n2 <= p1 && p1 < (p2 || multiple)) || p1 <= n2 && n2 < (n1 || multiple)
+            } else {
+                return (n1 <= p2 && p2 < (p1 || multiple)) || (p2 <= n1 && n1 < (n2 || multiple))
+            }
+        }
+    }
+
+    static isOverlap([t1, d1, p1, n1], [t2, d2, p2, n2], multiple) {
+        let [s1, e1] = d1 > 0 ? [p1, n1 || multiple] : [n1, p1 || multiple]
+        let [s2, e2] = d2 > 0 ? [p2, n2 || multiple] : [n2, p2 || multiple]
+        return Math.max(s1, s2) <= Math.min(e1, e2)
+    }
+
+    static getSignals(h1, h2) {
+        if (h1.seconds === 0 && h2.seconds === 0) return 0
+        let thisLCM = lcm(h1.hands, h2.hands), minLen = h1.seconds || h2.seconds, maxLen = Math.max(h1.seconds, h2.seconds)
+
+        let doLoops = thisLCM < minLen
+        let len = doLoops ? thisLCM : maxLen
+
+        if (!doLoops) {
+            let h1Arr = h1.allMoves().take(len), h2Arr = h2.allMoves().take(len)
+
+            return h1Arr.reduce((a, c) => Hand.isMeeting(c, h2Arr.next().value, h1.multiple) ? a + 1 : a, 0)
+        }
+
+
+        let fullLoops = Math.floor(minLen / thisLCM), rem = minLen % thisLCM, h1Arr = h1.allMoves().take(len), h2Arr = h2.allMoves().take(len)
+
+        let result = 0, loopTotal = 0, remTotal = 0
+
+        h1Arr.forEach((h, i) => {
+            if (Hand.isMeeting(h, h2Arr.next().value, h1.multiple)) {
+                loopTotal++
+                if (i < rem) remTotal++
+            }
+        })
+
+        result += ((fullLoops * loopTotal) + remTotal)
+
+        if (h2.seconds > minLen) {
+            let diff = h2.seconds - h1.seconds, dLoops = Math.floor(diff / len), dRem = diff % len
+
+            if (dLoops || dRem) {
+                let dLoopTotal = 0, dRemTotal = 0
+
+                h2.allMoves().drop(rem).take(len).forEach((h, i) => {
+                    if (Hand.isMeeting([null, -1, h1.endVal, h1.endVal], h, h1.multiple)) {
+                        dLoopTotal++
+                        if (i < dRem) dRemTotal++
+                    }
+                })
+                result += ((dLoops * dLoopTotal) + dRemTotal)
+            }
+        }
+
+        return result
+    }
 }
 
-let [h1, h2, h3] = Array(cLen).fill().map((x, i) => lines.map((x) => x[i])).map((x) => new Hand(x)).sort((a, b) => {
-    if (a.seconds === b.seconds) {
-        return b.hands - a.hands
-    }
-    return b.seconds - a.seconds
-})
+const makeMoves = ([hands, dir, start, seconds], multiple) => {
+    let pos = seconds ? Array(hands).fill(0).map((x, i) => x + (i * (multiple / hands))) : null
+    let startVal = pos ? pos[start] : (start * (multiple / hands)), lastVal
 
-let max = h1.seconds
-
-console.log(h1, h2, h3)
-
-const meeting = (a, b) => {
-    if (typeof a === 'object' && typeof b === 'object') {
-        let [s1, step1, [n1, n2]] = a
-        let [s2, step2, [n3, n4]] = b
-        let [start1, end1] = step1 > 0 ? [n1, n2] : [n2, n1]
-        let [start2, end2] = step2 > 0 ? [n1, n2] : [n2, n1]
-        if (end1 === end2) return 1
-
+    if (seconds) {
+        if (dir > 0) {
+            lastVal = pos[(start + seconds) % hands]
+            if (start + 1 < hands) {
+                pos = pos.slice(start + 1).concat(pos.slice(0, start + 1))
+            }
+        } else {
+            lastVal = pos[(start - seconds + (Math.ceil(seconds / hands) * hands)) % hands]
+            if (start > 0) {
+                pos = pos.slice(0, start).reverse().concat(pos.slice(start).reverse())
+            } else {
+                pos.reverse()
+            }
+        }
     } else {
-
+        lastVal = startVal
     }
 
+    return [startVal, lastVal, pos]
 }
 
+const solve = (input) => {
+    let lines = input.split(/[\r\n]{2}/).map((x) => x.split(/[\r\n]+/).map((x, i) => i === 1 ? x.split(' ')[1].split(':').map((y) => y === 'CW' ? 1 : -1) : x.split(' ')[1].match(/\d+/g).map(Number)))
 
-let h1Arr = h1.allMoves().take(max).toArray()
-let h2Arr = h2.allMoves().take(max).toArray()
-let h3Arr = h3.allMoves().take(max).toArray()
-console.log(h1Arr)
-console.log(h2Arr)
-console.log(h3Arr)
+    return lines.flatMap((x) => {
+        let m = x[0].reduce((a, c) => lcm(a, c))
+        let [h1, h2, h3] = x.reduce((a, c) => {
+            c.forEach((v, i) => a[i].push(v))
+            return a
+        }, [[], [], []]).map((x) => new Hand(x, m, ...makeMoves(x, m))).sort((a, b) => a.seconds - b.seconds)
+
+        return [Hand.getSignals(h1, h2), Hand.getSignals(h1, h3), Hand.getSignals(h2, h3)]
+    }).reduce((a, c) => a + c, 0)
+}
+
+console.log(solve(input1))
+console.log(solve(input2))
+console.log(solve(input3))
+
