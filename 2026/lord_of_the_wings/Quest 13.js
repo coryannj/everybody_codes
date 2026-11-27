@@ -76,7 +76,6 @@ class Hand {
             return h1Arr.reduce((a, c) => Hand.isMeeting(c, h2Arr.next().value, h1.multiple) ? a + 1 : a, 0)
         }
 
-
         let fullLoops = Math.floor(minLen / thisLCM), rem = minLen % thisLCM, h1Arr = h1.allMoves().take(len), h2Arr = h2.allMoves().take(len)
 
         let result = 0, loopTotal = 0, remTotal = 0
@@ -92,18 +91,15 @@ class Hand {
 
         if (h2.seconds > minLen) {
             let diff = h2.seconds - h1.seconds, dLoops = Math.floor(diff / len), dRem = diff % len
+            let dLoopTotal = 0, dRemTotal = 0
 
-            if (dLoops || dRem) {
-                let dLoopTotal = 0, dRemTotal = 0
-
-                h2.allMoves().drop(rem).take(len).forEach((h, i) => {
-                    if (Hand.isMeeting([null, -1, h1.endVal, h1.endVal], h, h1.multiple)) {
-                        dLoopTotal++
-                        if (i < dRem) dRemTotal++
-                    }
-                })
-                result += ((dLoops * dLoopTotal) + dRemTotal)
-            }
+            h2.allMoves().drop(rem).take(len).forEach((h, i) => {
+                if (Hand.isMeeting([null, -1, h1.endVal, h1.endVal], h, h1.multiple)) {
+                    dLoopTotal++
+                    if (i < dRem) dRemTotal++
+                }
+            })
+            result += ((dLoops * dLoopTotal) + dRemTotal)
         }
 
         return result
